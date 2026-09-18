@@ -1,0 +1,1346 @@
+{
+  "meta": {
+    "engine": "specs",
+    "suite": "branching-scale",
+    "startedAt": "2026-09-17T19:08:40.326Z",
+    "repetitions": 20,
+    "warmup": 3,
+    "timeoutMs": 1200000,
+    "memoryMb": 8192,
+    "env": {
+      "platform": "linux",
+      "cpu": "Intel(R) Xeon(R) CPU           E5620  @ 2.40GHz",
+      "cpuCount": 16,
+      "memBytes": 12575371264,
+      "bun": "1.4.2",
+      "docker": "Docker version 26.1.3, build 26.1.3-0ubuntu1~20.04.1",
+      "specsImageId": "sha256:762c48d6a3e772827e98645860b9d1991d5a213cee9a02533492169eddb183d1",
+      "z3": "Z3 version 4.13.4 - 64 bit"
+    },
+    "finishedAt": "2026-09-18T04:10:13.559Z"
+  },
+  "summary": {
+    "meanMs": 34128.79084451554,
+    "medianMs": 34070.99345099926,
+    "total": 75,
+    "correct": 28,
+    "incorrect": {
+      "count": 4,
+      "ids": [
+        "001-branching_10-add_fresh_variable_clause_at_contacted_member_to_sub",
+        "002-branching_10-add_fresh_variable_clause_at_new_member_to_sub",
+        "010-branching_10-drop_variable_from_super",
+        "025-branching_local_10-widen_virtual_member"
+      ]
+    },
+    "unknown": {
+      "count": 0,
+      "ids": []
+    },
+    "timeout": {
+      "count": 10,
+      "ids": [
+        "028-branching_100-add_member_to_super",
+        "049-branching_local_100-widen_virtual_member",
+        "050-branching_local_100-widen_virtual_member",
+        "053-branching_1000-add_member_to_super",
+        "067-branching_1000-rename_member",
+        "068-branching_1000-rename_member",
+        "072-branching_1000-swap_constant",
+        "073-branching_1000-swap_constant",
+        "074-branching_local_1000-widen_virtual_member",
+        "075-branching_local_1000-widen_virtual_member"
+      ]
+    },
+    "outOfMemory": {
+      "count": 33,
+      "ids": [
+        "005-branching_local_10-assign_federation",
+        "026-branching_100-add_fresh_variable_clause_at_contacted_member_to_sub",
+        "027-branching_100-add_fresh_variable_clause_at_new_member_to_sub",
+        "029-branching_100-add_shared_variable_clause_to_sub",
+        "030-branching_local_100-assign_federation",
+        "031-branching_100-bind_local_variable",
+        "034-branching_100-drop_head_variable",
+        "035-branching_100-drop_variable_from_super",
+        "036-branching_100-identity",
+        "037-branching_100-relax_clause",
+        "038-branching_100-relax_clause",
+        "039-branching_100-rename_local_variable",
+        "040-branching_100-rename_local_variable",
+        "041-branching_100-rename_local_variable",
+        "044-branching_100-reorder_body",
+        "045-branching_100-reorder_body",
+        "046-branching_100-reorder_body",
+        "051-branching_1000-add_fresh_variable_clause_at_contacted_member_to_sub",
+        "052-branching_1000-add_fresh_variable_clause_at_new_member_to_sub",
+        "054-branching_1000-add_shared_variable_clause_to_sub",
+        "055-branching_local_1000-assign_federation",
+        "056-branching_1000-bind_local_variable",
+        "059-branching_1000-drop_head_variable",
+        "060-branching_1000-drop_variable_from_super",
+        "061-branching_1000-identity",
+        "062-branching_1000-relax_clause",
+        "063-branching_1000-relax_clause",
+        "064-branching_1000-rename_local_variable",
+        "065-branching_1000-rename_local_variable",
+        "066-branching_1000-rename_local_variable",
+        "069-branching_1000-reorder_body",
+        "070-branching_1000-reorder_body",
+        "071-branching_1000-reorder_body"
+      ]
+    },
+    "error": {
+      "count": 0,
+      "ids": []
+    },
+    "bySize": {
+      "10": {
+        "meanMs": 33542.71625290278,
+        "medianMs": 34828.221403986216
+      },
+      "100": {
+        "meanMs": 11523.421088786905,
+        "medianMs": 3802.4537080079317
+      },
+      "1000": {
+        "meanMs": 93266.12113705596,
+        "medianMs": 74197.77686101198
+      }
+    }
+  },
+  "results": {
+    "001-branching_10-add_fresh_variable_clause_at_contacted_member_to_sub": {
+      "expected": "not contained",
+      "verdict": "contained",
+      "outcome": "incorrect",
+      "meanMs": 35529.07030400634,
+      "medianMs": 35529.07030400634,
+      "ms": [
+        35529.07030400634
+      ]
+    },
+    "002-branching_10-add_fresh_variable_clause_at_new_member_to_sub": {
+      "expected": "not contained",
+      "verdict": "contained",
+      "outcome": "incorrect",
+      "meanMs": 35189.51019999385,
+      "medianMs": 35189.51019999385,
+      "ms": [
+        35189.51019999385
+      ]
+    },
+    "003-branching_10-add_member_to_super": {
+      "expected": "not contained",
+      "verdict": "not contained",
+      "outcome": "correct",
+      "meanMs": 72894.46054639667,
+      "medianMs": 72721.3115234971,
+      "ms": [
+        72630.71200498939,
+        72562.14670300484,
+        72429.82444301248,
+        72594.14260399342,
+        72937.66759300232,
+        72335.8409639895,
+        72592.27722099423,
+        72677.92070198059,
+        72085.09788298607,
+        73210.86967402697,
+        74145.15913799405,
+        72764.70234501362,
+        73128.6614689827,
+        72496.5869089961,
+        73124.7720900178,
+        72401.89348697662,
+        74655.24739798903,
+        73317.18486100435,
+        72818.04749199748,
+        72980.4559469819
+      ]
+    },
+    "004-branching_10-add_shared_variable_clause_to_sub": {
+      "expected": "contained",
+      "verdict": "contained",
+      "outcome": "correct",
+      "meanMs": 35486.66172180325,
+      "medianMs": 35484.131479501724,
+      "ms": [
+        35532.11629101634,
+        35237.31800702214,
+        35203.752297014,
+        35569.65510699153,
+        35480.15464800596,
+        35403.41721102595,
+        35538.001105993986,
+        35404.38026499748,
+        35587.64000597596,
+        35604.81429299712,
+        35722.107400000095,
+        35488.108310997486,
+        35654.17595601082,
+        35261.30707299709,
+        35471.26308602095,
+        35824.47503900528,
+        35330.03494799137,
+        35345.67335399985,
+        35670.51554900408,
+        35404.32448899746
+      ]
+    },
+    "005-branching_local_10-assign_federation": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 82483.51162698865,
+      "medianMs": 82483.51162698865,
+      "ms": [
+        82483.51162698865
+      ]
+    },
+    "006-branching_10-bind_local_variable": {
+      "expected": "contained",
+      "verdict": "contained",
+      "outcome": "correct",
+      "meanMs": 35442.665810395774,
+      "medianMs": 35375.791413500905,
+      "ms": [
+        36473.23935300112,
+        35680.22389000654,
+        35405.54505801201,
+        35138.11742699146,
+        35370.60863998532,
+        35331.38466399908,
+        35107.86821401119,
+        35185.989840984344,
+        35205.426303982735,
+        35422.311898976564,
+        35578.72021099925,
+        35687.19021099806,
+        35753.055788993835,
+        35380.97418701649,
+        34838.78274098039,
+        35227.59448799491,
+        35345.25116798282,
+        35387.45126000047,
+        35254.10340100527,
+        36079.477461993694
+      ]
+    },
+    "007-branching_10-drop_head_variable": {
+      "expected": "not contained",
+      "verdict": "not contained",
+      "outcome": "correct",
+      "meanMs": 3134.26055085063,
+      "medianMs": 3128.438594505191,
+      "ms": [
+        3644.5943709909916,
+        3028.80346801877,
+        2969.9252849817276,
+        3054.3655149936676,
+        3043.8847729861736,
+        3027.6699610054493,
+        2960.7755320072174,
+        3137.0104160010815,
+        3136.552563995123,
+        3052.500569999218,
+        3186.548910021782,
+        3213.554475992918,
+        3162.9547930061817,
+        3154.2944030165672,
+        3078.405418008566,
+        3252.8433449864388,
+        3132.621531009674,
+        3124.2556580007076,
+        3112.020139992237,
+        3211.629887998104
+      ]
+    },
+    "008-branching_10-drop_head_variable": {
+      "expected": "not contained",
+      "verdict": "not contained",
+      "outcome": "correct",
+      "meanMs": 3132.4293178483845,
+      "medianMs": 3116.14297349751,
+      "ms": [
+        2979.937957972288,
+        3128.2824650108814,
+        3054.080642014742,
+        3237.2701709866524,
+        3071.0635010004044,
+        3104.0034819841385,
+        3029.164620012045,
+        3094.763721972704,
+        3145.7398970127106,
+        3178.6592670083046,
+        3096.359645009041,
+        3078.5833890140057,
+        3195.0005680024624,
+        3194.609068006277,
+        3194.594883978367,
+        3062.1794530153275,
+        3091.0786440074444,
+        3183.0840519964695,
+        3328.2167009711266,
+        3201.914227992296
+      ]
+    },
+    "009-branching_10-drop_head_variable": {
+      "expected": "contained",
+      "verdict": "contained",
+      "outcome": "correct",
+      "meanMs": 208232.8829785511,
+      "medianMs": 184873.8222039938,
+      "ms": [
+        242865.15348401666,
+        181100.28666999936,
+        270287.76082500815,
+        236897.67948698997,
+        180133.5086759925,
+        187190.4359499812,
+        182557.20845800638,
+        181967.39051899314,
+        181599.5950179994,
+        227942.82798200846,
+        179348.3868470192,
+        234369.80795401335,
+        182224.67638000846,
+        179266.5270589888,
+        239010.28333199024,
+        179841.43005400896,
+        238871.80594199896,
+        180074.4631780088,
+        240471.3720189929,
+        238637.0597369969
+      ]
+    },
+    "010-branching_10-drop_variable_from_super": {
+      "expected": "not contained",
+      "verdict": "contained",
+      "outcome": "incorrect",
+      "meanMs": 35583.87384200096,
+      "medianMs": 35583.87384200096,
+      "ms": [
+        35583.87384200096
+      ]
+    },
+    "011-branching_10-identity": {
+      "expected": "contained",
+      "verdict": "contained",
+      "outcome": "correct",
+      "meanMs": 35512.52397749871,
+      "medianMs": 35498.935058012605,
+      "ms": [
+        35911.05858498812,
+        35595.7460950017,
+        35608.67676401138,
+        35604.67838898301,
+        35271.41707700491,
+        35163.99002701044,
+        35213.35721600056,
+        35239.3386490047,
+        35328.093553990126,
+        35807.61257198453,
+        35356.00882399082,
+        35665.435075998306,
+        35336.3119609952,
+        35512.53208100796,
+        35509.719645023346,
+        35363.27986699343,
+        36097.76124998927,
+        35488.15047100186,
+        35360.36791500449,
+        35816.94353199005
+      ]
+    },
+    "012-branching_10-relax_clause": {
+      "expected": "not contained",
+      "verdict": "not contained",
+      "outcome": "correct",
+      "meanMs": 11837.305581751465,
+      "medianMs": 11863.802958011627,
+      "ms": [
+        11843.983602017164,
+        11691.767580002546,
+        12067.31954100728,
+        11817.157043009996,
+        11749.226831018925,
+        11706.14485001564,
+        11739.656062990427,
+        11610.90907201171,
+        11793.268566012383,
+        11972.729148983955,
+        11914.753897994757,
+        11883.62231400609,
+        11910.262620002031,
+        11909.044169008732,
+        11937.591943979263,
+        11891.624408006668,
+        11724.455816984177,
+        11764.647125005722,
+        11933.081085979939,
+        11884.865956991911
+      ]
+    },
+    "013-branching_10-relax_clause": {
+      "expected": "contained",
+      "verdict": "contained",
+      "outcome": "correct",
+      "meanMs": 38722.70310024917,
+      "medianMs": 38671.50919601321,
+      "ms": [
+        38357.508185982704,
+        38627.09110298753,
+        38516.462689995766,
+        38350.893994003534,
+        38665.10154700279,
+        38667.81238400936,
+        38771.70525997877,
+        38608.444142997265,
+        38741.84871700406,
+        39145.02607399225,
+        38978.94099500775,
+        38675.20600801706,
+        38784.617668002844,
+        38599.36746099591,
+        39187.44541698694,
+        38340.385114997625,
+        39610.078866004944,
+        38392.892087996006,
+        38684.16873601079,
+        38749.06555300951
+      ]
+    },
+    "014-branching_10-rename_local_variable": {
+      "expected": "contained",
+      "verdict": "contained",
+      "outcome": "correct",
+      "meanMs": 35313.498918350044,
+      "medianMs": 35309.228232994676,
+      "ms": [
+        35048.99775198102,
+        35431.0401160121,
+        35479.22202497721,
+        35245.0529230237,
+        35530.328338980675,
+        35170.437141001225,
+        35150.53785300255,
+        35005.39028099179,
+        34971.98471799493,
+        35410.428898990154,
+        35487.488154023886,
+        35158.38917800784,
+        35369.702244997025,
+        35788.403664022684,
+        35272.10047900677,
+        35130.130133003,
+        35062.12071698904,
+        35346.355986982584,
+        35744.994853019714,
+        35466.87290999293
+      ]
+    },
+    "015-branching_10-rename_local_variable": {
+      "expected": "contained",
+      "verdict": "contained",
+      "outcome": "correct",
+      "meanMs": 35406.613776394726,
+      "medianMs": 35343.89709249139,
+      "ms": [
+        35729.25029501319,
+        35093.42766401172,
+        35321.197739988565,
+        35023.17090898752,
+        35422.41302999854,
+        34972.07855698466,
+        35255.47152000666,
+        35021.52494999766,
+        35945.03980499506,
+        35298.18665698171,
+        35322.311980992556,
+        35493.370540976524,
+        35956.14666798711,
+        35512.69336697459,
+        35365.48220399022,
+        35496.984769016504,
+        35319.83211800456,
+        35655.29273498058,
+        35220.484769016504,
+        35707.91524899006
+      ]
+    },
+    "016-branching_10-rename_local_variable": {
+      "expected": "contained",
+      "verdict": "contained",
+      "outcome": "correct",
+      "meanMs": 35274.765807145835,
+      "medianMs": 35186.471183001995,
+      "ms": [
+        35195.47970700264,
+        34920.817160993814,
+        34989.887857973576,
+        35845.73963201046,
+        35177.46265900135,
+        35109.21195599437,
+        35262.56566300988,
+        35036.93135899305,
+        35404.46536397934,
+        35411.58132699132,
+        35805.117504000664,
+        35503.49768900871,
+        35078.14222899079,
+        35129.366962999105,
+        35976.397624999285,
+        35369.688210994005,
+        35096.73906198144,
+        34887.63291800022,
+        35088.86974900961,
+        35205.72150698304
+      ]
+    },
+    "017-branching_10-rename_member": {
+      "expected": "not contained",
+      "verdict": "not contained",
+      "outcome": "correct",
+      "meanMs": 3268.477774901688,
+      "medianMs": 3254.3927244991064,
+      "ms": [
+        3071.6355760097504,
+        3127.8469969928265,
+        3176.6945990025997,
+        3069.8545550107956,
+        3263.5289460122585,
+        3096.9564650058746,
+        3211.98136100173,
+        3237.486631989479,
+        3229.9360599815845,
+        3271.89066401124,
+        3335.3859359920025,
+        3245.2565029859543,
+        3236.4930160045624,
+        3346.067347973585,
+        3312.655309021473,
+        3287.544357985258,
+        3476.336457014084,
+        3455.790442019701,
+        3481.3928520083427,
+        3434.82142201066
+      ]
+    },
+    "018-branching_10-rename_member": {
+      "expected": "not contained",
+      "verdict": "not contained",
+      "outcome": "correct",
+      "meanMs": 3257.371010354161,
+      "medianMs": 3299.6222890019417,
+      "ms": [
+        3068.0966950058937,
+        3104.8963769972324,
+        3178.4245810210705,
+        3144.4272699952126,
+        3053.876589000225,
+        3203.489407002926,
+        3177.6596900224686,
+        3353.911789983511,
+        3236.274892002344,
+        3303.2782649993896,
+        3320.8532570004463,
+        3295.9663130044937,
+        3345.7665860056877,
+        3344.832754999399,
+        3329.0094009935856,
+        3354.1350589990616,
+        3190.517464995384,
+        3402.0377190113068,
+        3342.4897990226746,
+        3397.476297020912
+      ]
+    },
+    "019-branching_10-reorder_body": {
+      "expected": "contained",
+      "verdict": "contained",
+      "outcome": "correct",
+      "meanMs": 35045.235620748994,
+      "medianMs": 35075.48257650435,
+      "ms": [
+        35177.471500992775,
+        34679.262715011835,
+        34613.744915008545,
+        35306.20393201709,
+        34927.54824399948,
+        35337.76584401727,
+        35103.24261799455,
+        34979.583281993866,
+        34997.73886099458,
+        35045.85179001093,
+        35063.45612800121,
+        35087.509025007486,
+        35347.65382197499,
+        35104.244722008705,
+        34963.6156129837,
+        35211.772368997335,
+        35164.310186982155,
+        35095.63142800331,
+        34828.221403986216,
+        34869.884014993906
+      ]
+    },
+    "020-branching_10-reorder_body": {
+      "expected": "contained",
+      "verdict": "contained",
+      "outcome": "correct",
+      "meanMs": 34039.985575704275,
+      "medianMs": 34058.21064350009,
+      "ms": [
+        33773.94408398867,
+        34045.42783600092,
+        33970.50093302131,
+        33952.680258989334,
+        34088.67375099659,
+        33885.88016799092,
+        33554.86359000206,
+        33945.950326025486,
+        33685.41787600517,
+        34296.85114902258,
+        34261.73182800412,
+        33887.068823993206,
+        34070.99345099926,
+        34195.709253013134,
+        34147.38111400604,
+        34095.82607001066,
+        34251.98348599672,
+        34396.56322401762,
+        33846.9872699976,
+        34445.27702200413
+      ]
+    },
+    "021-branching_10-reorder_body": {
+      "expected": "contained",
+      "verdict": "contained",
+      "outcome": "correct",
+      "meanMs": 34226.690714000164,
+      "medianMs": 34183.45899750292,
+      "ms": [
+        34003.62198999524,
+        34179.828069001436,
+        33927.715025007725,
+        33838.15048700571,
+        33954.27763301134,
+        33980.293637007475,
+        34788.64702099562,
+        34320.718847990036,
+        34387.69437199831,
+        34162.84532901645,
+        34020.80343300104,
+        34413.22780498862,
+        34196.44460698962,
+        34097.48563399911,
+        34171.17066299915,
+        34189.16334798932,
+        34314.3643220067,
+        34370.49401000142,
+        34187.08992600441,
+        35029.77812099457
+      ]
+    },
+    "022-branching_10-swap_constant": {
+      "expected": "not contained",
+      "verdict": "not contained",
+      "outcome": "correct",
+      "meanMs": 3183.7355943948032,
+      "medianMs": 3190.723968490958,
+      "ms": [
+        3012.511720985174,
+        3121.622695982456,
+        3055.08584100008,
+        2985.7666350007057,
+        3070.467915982008,
+        3137.6122439801693,
+        3111.471245020628,
+        3211.9514580070972,
+        3136.664381980896,
+        3245.2033919990063,
+        3196.397331982851,
+        3120.2624759972095,
+        3343.2134539783,
+        3277.897771000862,
+        3253.5345779955387,
+        3244.6785430014133,
+        3185.0506049990654,
+        3392.8969199955463,
+        3211.696159005165,
+        3360.7265200018883
+      ]
+    },
+    "023-branching_10-swap_constant": {
+      "expected": "not contained",
+      "verdict": "not contained",
+      "outcome": "correct",
+      "meanMs": 3147.886742244661,
+      "medianMs": 3136.431413501501,
+      "ms": [
+        2937.7187919914722,
+        3090.701146006584,
+        3278.1156469881535,
+        3078.6827609837055,
+        3094.2931019961834,
+        3061.5133810043335,
+        3062.4695689976215,
+        3077.8301669955254,
+        3145.2854129970074,
+        3119.303992986679,
+        3202.2049579918385,
+        3127.577414005995,
+        3145.5607709884644,
+        3186.9091199934483,
+        3279.043354988098,
+        3236.961483001709,
+        3287.744370996952,
+        3147.8111819922924,
+        3086.5316259860992,
+        3311.4765940010548
+      ]
+    },
+    "024-branching_local_10-widen_virtual_member": {
+      "expected": "not contained",
+      "verdict": "not contained",
+      "outcome": "correct",
+      "meanMs": 3099.211405196786,
+      "medianMs": 3107.797797501087,
+      "ms": [
+        2970.9554249942303,
+        2991.4468629956245,
+        3069.2884159982204,
+        3044.6579169929028,
+        3045.9448160231113,
+        3111.2418880164623,
+        3152.958872973919,
+        3112.2216689884663,
+        3154.9843639731407,
+        3229.71959900856,
+        3079.355127006769,
+        3104.353706985712,
+        3128.264501005411,
+        3104.2188450098038,
+        3069.275844991207,
+        3152.3383269906044,
+        3201.5709140002728,
+        3127.077443987131,
+        2945.601015985012,
+        3188.752548009157
+      ]
+    },
+    "025-branching_local_10-widen_virtual_member": {
+      "expected": "contained",
+      "verdict": "not contained",
+      "outcome": "incorrect",
+      "meanMs": 2826.7859570086002,
+      "medianMs": 2826.7859570086002,
+      "ms": [
+        2826.7859570086002
+      ]
+    },
+    "026-branching_100-add_fresh_variable_clause_at_contacted_member_to_sub": {
+      "expected": "not contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 67310.97329699993,
+      "medianMs": 67310.97329699993,
+      "ms": [
+        67310.97329699993
+      ]
+    },
+    "027-branching_100-add_fresh_variable_clause_at_new_member_to_sub": {
+      "expected": "not contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 60140.340430021286,
+      "medianMs": 60140.340430021286,
+      "ms": [
+        60140.340430021286
+      ]
+    },
+    "028-branching_100-add_member_to_super": {
+      "expected": "not contained",
+      "verdict": "timeout",
+      "outcome": "timeout"
+    },
+    "029-branching_100-add_shared_variable_clause_to_sub": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 65992.21768400073,
+      "medianMs": 65992.21768400073,
+      "ms": [
+        65992.21768400073
+      ]
+    },
+    "030-branching_local_100-assign_federation": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 77860.17946597934,
+      "medianMs": 77860.17946597934,
+      "ms": [
+        77860.17946597934
+      ]
+    },
+    "031-branching_100-bind_local_variable": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 59796.63632199168,
+      "medianMs": 59796.63632199168,
+      "ms": [
+        59796.63632199168
+      ]
+    },
+    "032-branching_100-drop_head_variable": {
+      "expected": "not contained",
+      "verdict": "not contained",
+      "outcome": "correct",
+      "meanMs": 3175.051894852519,
+      "medianMs": 3159.0181220024824,
+      "ms": [
+        3420.2579669952393,
+        3146.4252800047398,
+        3113.412010014057,
+        3111.8933350145817,
+        3078.6929599940777,
+        3112.158672004938,
+        2986.717425018549,
+        3212.4728479981422,
+        3253.574037015438,
+        3105.2813769876957,
+        3202.9209449887276,
+        3272.5774500072002,
+        3171.886982023716,
+        3094.236200004816,
+        3171.610964000225,
+        3330.72626298666,
+        3355.772219002247,
+        3186.539662986994,
+        3052.42232298851,
+        3121.4589770138264
+      ]
+    },
+    "033-branching_100-drop_head_variable": {
+      "expected": "not contained",
+      "verdict": "not contained",
+      "outcome": "correct",
+      "meanMs": 3151.9819840982555,
+      "medianMs": 3156.300181001425,
+      "ms": [
+        3153.6568230092525,
+        2886.0139970183372,
+        3186.5689310133457,
+        3087.558335006237,
+        2986.614241987467,
+        3129.793296009302,
+        2995.7513609826565,
+        3078.300411015749,
+        3119.996178984642,
+        3363.204620987177,
+        3288.0313869714737,
+        3286.016082972288,
+        3228.0718629956245,
+        3195.570102006197,
+        3158.943538993597,
+        3061.201409995556,
+        3261.441895991564,
+        3127.853329002857,
+        3219.445820003748,
+        3225.6060570180416
+      ]
+    },
+    "034-branching_100-drop_head_variable": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 59079.2732719779,
+      "medianMs": 59079.2732719779,
+      "ms": [
+        59079.2732719779
+      ]
+    },
+    "035-branching_100-drop_variable_from_super": {
+      "expected": "not contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 30341.461068987846,
+      "medianMs": 30341.461068987846,
+      "ms": [
+        30341.461068987846
+      ]
+    },
+    "036-branching_100-identity": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 60725.46818900108,
+      "medianMs": 60725.46818900108,
+      "ms": [
+        60725.46818900108
+      ]
+    },
+    "037-branching_100-relax_clause": {
+      "expected": "not contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 59376.14888000488,
+      "medianMs": 59376.14888000488,
+      "ms": [
+        59376.14888000488
+      ]
+    },
+    "038-branching_100-relax_clause": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 90503.42679101229,
+      "medianMs": 90503.42679101229,
+      "ms": [
+        90503.42679101229
+      ]
+    },
+    "039-branching_100-rename_local_variable": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 58647.95911601186,
+      "medianMs": 58647.95911601186,
+      "ms": [
+        58647.95911601186
+      ]
+    },
+    "040-branching_100-rename_local_variable": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 65908.33587801456,
+      "medianMs": 65908.33587801456,
+      "ms": [
+        65908.33587801456
+      ]
+    },
+    "041-branching_100-rename_local_variable": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 68531.54411298037,
+      "medianMs": 68531.54411298037,
+      "ms": [
+        68531.54411298037
+      ]
+    },
+    "042-branching_100-rename_member": {
+      "expected": "not contained",
+      "verdict": "not contained",
+      "outcome": "correct",
+      "meanMs": 8146.820740102232,
+      "medianMs": 8134.653484508395,
+      "ms": [
+        8551.19767099619,
+        7978.002182006836,
+        7928.412367016077,
+        7986.220064997673,
+        8139.122207999229,
+        8026.614495009184,
+        7928.262466996908,
+        8136.745683014393,
+        8210.595697015524,
+        8198.223677009344,
+        8111.240911990404,
+        7989.8782979846,
+        8287.02073699236,
+        8069.511788994074,
+        8132.5612860023975,
+        8543.311533004045,
+        8028.554156988859,
+        8156.103987008333,
+        8237.036880999804,
+        8297.798710018396
+      ]
+    },
+    "043-branching_100-rename_member": {
+      "expected": "not contained",
+      "verdict": "not contained",
+      "outcome": "correct",
+      "meanMs": 8166.639379800856,
+      "medianMs": 8167.348952993751,
+      "ms": [
+        8576.247577011585,
+        8046.428132981062,
+        8170.239100009203,
+        7995.414403021336,
+        8026.934462994337,
+        8030.38727799058,
+        8036.55586001277,
+        8238.02185100317,
+        8130.686464995146,
+        8177.190735012293,
+        8163.385501980782,
+        8169.569189995527,
+        8204.261141985655,
+        8319.823948025703,
+        8172.542596012354,
+        8165.128715991974,
+        8219.112464994192,
+        8310.30926901102,
+        8100.632463991642,
+        8079.916438996792
+      ]
+    },
+    "044-branching_100-reorder_body": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 66850.37522998452,
+      "medianMs": 66850.37522998452,
+      "ms": [
+        66850.37522998452
+      ]
+    },
+    "045-branching_100-reorder_body": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 36930.04737699032,
+      "medianMs": 36930.04737699032,
+      "ms": [
+        36930.04737699032
+      ]
+    },
+    "046-branching_100-reorder_body": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 35127.69111600518,
+      "medianMs": 35127.69111600518,
+      "ms": [
+        35127.69111600518
+      ]
+    },
+    "047-branching_100-swap_constant": {
+      "expected": "not contained",
+      "verdict": "not contained",
+      "outcome": "correct",
+      "meanMs": 3776.1519228488205,
+      "medianMs": 3741.3843309879303,
+      "ms": [
+        4291.976559996605,
+        3594.446373015642,
+        3771.478744983673,
+        3629.1593880057335,
+        3569.677855014801,
+        3719.4668340086937,
+        3713.0008519887924,
+        3685.9573430120945,
+        3745.0948269963264,
+        3793.3669199943542,
+        3702.8338149785995,
+        3987.938573986292,
+        3870.197245001793,
+        3737.673834979534,
+        3800.8171389997005,
+        3777.8360919952393,
+        3804.090277016163,
+        3953.5354709923267,
+        3687.702248007059,
+        3686.7880640029907
+      ]
+    },
+    "048-branching_100-swap_constant": {
+      "expected": "not contained",
+      "verdict": "not contained",
+      "outcome": "correct",
+      "meanMs": 3786.5135705500843,
+      "medianMs": 3783.313903003931,
+      "ms": [
+        4028.1847449839115,
+        3678.713322997093,
+        3612.347097992897,
+        3779.147136002779,
+        3628.598879992962,
+        3688.4425790011883,
+        3912.3919309973717,
+        3795.2414060235023,
+        3886.8355160057545,
+        3765.462388008833,
+        3795.4092170000076,
+        3759.196687012911,
+        3746.0992450118065,
+        3870.944151997566,
+        3729.340077996254,
+        3870.3974329829216,
+        3787.480670005083,
+        3844.2586549818516,
+        3811.4478389918804,
+        3740.332433015108
+      ]
+    },
+    "049-branching_local_100-widen_virtual_member": {
+      "expected": "not contained",
+      "verdict": "timeout",
+      "outcome": "timeout"
+    },
+    "050-branching_local_100-widen_virtual_member": {
+      "expected": "contained",
+      "verdict": "timeout",
+      "outcome": "timeout"
+    },
+    "051-branching_1000-add_fresh_variable_clause_at_contacted_member_to_sub": {
+      "expected": "not contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 144654.56409701705,
+      "medianMs": 144654.56409701705,
+      "ms": [
+        144654.56409701705
+      ]
+    },
+    "052-branching_1000-add_fresh_variable_clause_at_new_member_to_sub": {
+      "expected": "not contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 138691.8252670169,
+      "medianMs": 138691.8252670169,
+      "ms": [
+        138691.8252670169
+      ]
+    },
+    "053-branching_1000-add_member_to_super": {
+      "expected": "not contained",
+      "verdict": "timeout",
+      "outcome": "timeout"
+    },
+    "054-branching_1000-add_shared_variable_clause_to_sub": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 138133.7787850201,
+      "medianMs": 138133.7787850201,
+      "ms": [
+        138133.7787850201
+      ]
+    },
+    "055-branching_local_1000-assign_federation": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 181500.9423840046,
+      "medianMs": 181500.9423840046,
+      "ms": [
+        181500.9423840046
+      ]
+    },
+    "056-branching_1000-bind_local_variable": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 144413.8527059853,
+      "medianMs": 144413.8527059853,
+      "ms": [
+        144413.8527059853
+      ]
+    },
+    "057-branching_1000-drop_head_variable": {
+      "expected": "not contained",
+      "verdict": "not contained",
+      "outcome": "correct",
+      "meanMs": 74091.63180805296,
+      "medianMs": 74035.35716950893,
+      "ms": [
+        74629.74166601896,
+        73955.70397800207,
+        73820.33129298687,
+        73688.05429700017,
+        73873.04293498397,
+        73951.95500800014,
+        74238.49511802197,
+        74090.01985999942,
+        73997.8720010221,
+        74025.71399700642,
+        74214.26278498769,
+        74013.9153150022,
+        74172.20199900866,
+        74339.97592401505,
+        74556.26123398542,
+        74021.93452098966,
+        74045.00034201145,
+        74107.32333901525,
+        73808.04347598553,
+        74282.78707301617
+      ]
+    },
+    "058-branching_1000-drop_head_variable": {
+      "expected": "not contained",
+      "verdict": "not contained",
+      "outcome": "correct",
+      "meanMs": 74137.6665775001,
+      "medianMs": 74140.70263200998,
+      "ms": [
+        74172.54696699977,
+        74215.94407600164,
+        74006.84684601426,
+        74098.01908999681,
+        73763.10422000289,
+        73983.44699898362,
+        74098.892839998,
+        74347.13403299451,
+        74104.01053699851,
+        74134.11167901754,
+        74365.54905697703,
+        74431.62317100167,
+        74196.81343600154,
+        73972.35622799397,
+        74181.41712099314,
+        74249.1433750093,
+        74147.29358500242,
+        74081.40206998587,
+        74004.93593400717,
+        74198.74028602242
+      ]
+    },
+    "059-branching_1000-drop_head_variable": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 144037.24488300085,
+      "medianMs": 144037.24488300085,
+      "ms": [
+        144037.24488300085
+      ]
+    },
+    "060-branching_1000-drop_variable_from_super": {
+      "expected": "not contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 100493.60419300199,
+      "medianMs": 100493.60419300199,
+      "ms": [
+        100493.60419300199
+      ]
+    },
+    "061-branching_1000-identity": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 143254.3554650247,
+      "medianMs": 143254.3554650247,
+      "ms": [
+        143254.3554650247
+      ]
+    },
+    "062-branching_1000-relax_clause": {
+      "expected": "not contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 143232.11724498868,
+      "medianMs": 143232.11724498868,
+      "ms": [
+        143232.11724498868
+      ]
+    },
+    "063-branching_1000-relax_clause": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 175074.49755099416,
+      "medianMs": 175074.49755099416,
+      "ms": [
+        175074.49755099416
+      ]
+    },
+    "064-branching_1000-rename_local_variable": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 144914.77285298705,
+      "medianMs": 144914.77285298705,
+      "ms": [
+        144914.77285298705
+      ]
+    },
+    "065-branching_1000-rename_local_variable": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 145619.22751402855,
+      "medianMs": 145619.22751402855,
+      "ms": [
+        145619.22751402855
+      ]
+    },
+    "066-branching_1000-rename_local_variable": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 146956.5149590075,
+      "medianMs": 146956.5149590075,
+      "ms": [
+        146956.5149590075
+      ]
+    },
+    "067-branching_1000-rename_member": {
+      "expected": "not contained",
+      "verdict": "timeout",
+      "outcome": "timeout"
+    },
+    "068-branching_1000-rename_member": {
+      "expected": "not contained",
+      "verdict": "timeout",
+      "outcome": "timeout"
+    },
+    "069-branching_1000-reorder_body": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 138709.83178701997,
+      "medianMs": 138709.83178701997,
+      "ms": [
+        138709.83178701997
+      ]
+    },
+    "070-branching_1000-reorder_body": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 114635.50651499629,
+      "medianMs": 114635.50651499629,
+      "ms": [
+        114635.50651499629
+      ]
+    },
+    "071-branching_1000-reorder_body": {
+      "expected": "contained",
+      "verdict": "out of memory",
+      "outcome": "out of memory",
+      "meanMs": 113994.17975997925,
+      "medianMs": 113994.17975997925,
+      "ms": [
+        113994.17975997925
+      ]
+    },
+    "072-branching_1000-swap_constant": {
+      "expected": "not contained",
+      "verdict": "timeout",
+      "outcome": "timeout"
+    },
+    "073-branching_1000-swap_constant": {
+      "expected": "not contained",
+      "verdict": "timeout",
+      "outcome": "timeout"
+    },
+    "074-branching_local_1000-widen_virtual_member": {
+      "expected": "not contained",
+      "verdict": "timeout",
+      "outcome": "timeout"
+    },
+    "075-branching_local_1000-widen_virtual_member": {
+      "expected": "contained",
+      "verdict": "timeout",
+      "outcome": "timeout"
+    }
+  }
+}
