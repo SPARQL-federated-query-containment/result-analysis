@@ -12,3 +12,4 @@ wheels/
 .ruff_cache
 .zed
 .mypy_cache
+**/*/__marimo__
