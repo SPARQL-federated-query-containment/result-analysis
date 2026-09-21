@@ -64,11 +64,11 @@ def _(Suite, mo):
 
 
 @app.cell
-def _(dropdown, log_scale, mo, operator_dropdown):
+def _(dropdown, log_scale, mo):
     mo.vstack(
         [
             mo.md("# Pair comparison: BFC vs SPECS"),
-            mo.hstack([dropdown, operator_dropdown, log_scale], justify="start"),
+            mo.hstack([dropdown, log_scale], justify="start"),
         ]
     )
     return
@@ -164,11 +164,20 @@ def _(bfc_df, mo):
 
 
 @app.cell
-def _(bfc_df, figure_view, log_scale, mo, operator_dropdown, specs_df, violin_figure):
+def _(
+    bfc_df,
+    figure_view,
+    log_scale,
+    mo,
+    operator_dropdown,
+    specs_df,
+    violin_figure,
+):
     _group = bfc_df[bfc_df["Operator"] == operator_dropdown.value]
     mo.vstack(
         [
-            mo.md("## Execution time per pair"),
+            mo.md("## Operator detail"),
+            operator_dropdown,
             figure_view(
                 violin_figure(
                     _group,
@@ -177,6 +186,79 @@ def _(bfc_df, figure_view, log_scale, mo, operator_dropdown, specs_df, violin_fi
                     log_scale.value,
                 )
             ),
+        ]
+    )
+    return
+
+
+@app.cell
+def _(bfc_df, mo, pair_labels, pd, specs_df):
+    def _time_per_run(df):
+        return df["Times"].map(lambda times: sum(times) / len(times) if len(times) > 0 else float("nan"))
+
+    _failed = (
+        bfc_df["Timeouts"] | bfc_df["Errors"] | bfc_df["OutOfMemory"]
+        | specs_df["Timeouts"] | specs_df["Errors"] | specs_df["OutOfMemory"]
+    )
+    _speedup = (_time_per_run(specs_df) / _time_per_run(bfc_df)).where(~_failed)
+
+    pairs_table = pd.DataFrame(
+        {
+            "Operator": bfc_df["Operator"].map(lambda operator: operator.label),
+            "Pair": pair_labels(bfc_df),
+            "BFC correct": bfc_df["Correct"].map({True: "Yes", False: "No"}),
+            "SPECS correct": specs_df["Correct"].map({True: "Yes", False: "No"}),
+            "Speedup, BFC vs SPECS (x)": _speedup.astype(float).round(2),
+        }
+    )
+
+    from math import log2 as _log2
+
+    _BLUE, _ORANGE = "42, 120, 214", "235, 104, 52"
+    _GREEN, _RED, _AMBER, _GREY = "46, 160, 67", "218, 54, 51", "237, 161, 0", "128, 128, 128"
+
+    def _style_cell(row_id, column, value):
+        _pair_speedup = pairs_table["Speedup, BFC vs SPECS (x)"].iloc[int(row_id)]
+        if column in ("BFC correct", "SPECS correct"):
+            _outcome = (bfc_df if column == "BFC correct" else specs_df)["Outcome"].iloc[int(row_id)]
+            _rgb = _GREEN if value == "Yes" else _AMBER if _outcome == "unknown" else _RED
+            return {"backgroundColor": f"rgba({_rgb}, 0.25)"}
+        if pd.isna(_pair_speedup):
+            return {"backgroundColor": f"rgba({_GREY}, 0.15)", "color": "gray"}
+        if column == "Speedup, BFC vs SPECS (x)":
+            _strength = min(abs(_log2(value)) / 4, 1)
+            _rgb = _BLUE if value > 1 else _ORANGE
+            return {"backgroundColor": f"rgba({_rgb}, {0.15 + 0.55 * _strength:.2f})"}
+        return {}
+
+    def _swatch(rgb, text):
+        return (
+            f'<span style="display:inline-block;width:0.9em;height:0.9em;border-radius:2px;'
+            f'background:rgba({rgb}, 0.6);margin:0 0.3em 0 1.2em;vertical-align:-0.1em"></span>{text}'
+        )
+
+    _gradient = (
+        '<span style="display:inline-block;vertical-align:middle;font-size:0.85em">'
+        '<span style="display:block;width:16em;height:0.9em;border-radius:2px;'
+        f"background:linear-gradient(to right, rgba({_ORANGE}, 0.70), rgba({_ORANGE}, 0.15) 50%, "
+        f'rgba({_BLUE}, 0.15) 50%, rgba({_BLUE}, 0.70))"></span>'
+        '<span style="display:flex;justify-content:space-between;width:16em">'
+        "<span>SPECS 16x+ faster</span><span>equal</span><span>BFC 16x+ faster</span></span></span>"
+    )
+
+    _legend = mo.md(
+        _gradient
+        + _swatch(_GREEN, "correct")
+        + _swatch(_AMBER, "unknown")
+        + _swatch(_RED, "incorrect, timeout or out of memory")
+        + _swatch(_GREY, "no speedup: timeout, error or out of memory")
+    )
+
+    mo.vstack(
+        [
+            mo.md("## Pairs (speedup > 1: BFC faster, < 1: SPECS faster)"),
+            _legend,
+            mo.ui.table(pairs_table, selection=None, page_size=15, style_cell=_style_cell),
         ]
     )
     return
@@ -218,8 +300,8 @@ def _(bfc_df, mannwhitneyu, mo, np, pd, pooled_times, specs_df, suite):
                 "Mean (ms)": np.mean(_times_) if _times_ else float("nan"),
                 "Median (ms)": np.median(_times_) if _times_ else float("nan"),
                 "Correct": int(_df["Correct"].sum()),
+                "Unknown": int((_df["Outcome"] == "unknown").sum()),
                 "Incorrect": int(_df["Incorrect"].sum()),
-
                 "Timeouts": int(_df["Timeouts"].sum()),
                 "Errors": int(_df["Errors"].sum()),
                 "OutOfMemory": int(_df["OutOfMemory"].sum()),
@@ -233,82 +315,12 @@ def _(bfc_df, mannwhitneyu, mo, np, pd, pooled_times, specs_df, suite):
 
     mo.vstack(
         [
-            mo.md("## Summary"),
+            mo.md("# Suite overview"),
             summary,
             mo.md(
                 f"Mann-Whitney U on all pooled timings of suite `{suite.value}`: "
                 f"p {_p_text}. {_conclusion}"
             ),
-        ]
-    )
-    return
-
-
-@app.cell
-def _(bfc_df, mo, pair_labels, pd, specs_df):
-    def _time_per_run(df):
-        return df["Times"].map(lambda times: sum(times) / len(times) if len(times) > 0 else float("nan"))
-
-    _failed = (
-        bfc_df["Timeouts"] | bfc_df["Errors"] | bfc_df["OutOfMemory"]
-        | specs_df["Timeouts"] | specs_df["Errors"] | specs_df["OutOfMemory"]
-    )
-    _speedup = (_time_per_run(specs_df) / _time_per_run(bfc_df)).where(~_failed)
-
-    pairs_table = pd.DataFrame(
-        {
-            "Operator": bfc_df["Operator"].map(lambda operator: operator.label),
-            "Pair": pair_labels(bfc_df),
-            "BFC correct": bfc_df["Correct"].map({True: "Yes", False: "No"}),
-            "SPECS correct": specs_df["Correct"].map({True: "Yes", False: "No"}),
-            "Speedup, BFC vs SPECS (x)": _speedup.astype(float).round(2),
-        }
-    )
-
-    from math import log2 as _log2
-
-    _BLUE, _ORANGE = "42, 120, 214", "235, 104, 52"
-    _GREEN, _RED, _GREY = "46, 160, 67", "218, 54, 51", "128, 128, 128"
-
-    def _style_cell(row_id, column, value):
-        _pair_speedup = pairs_table["Speedup, BFC vs SPECS (x)"].iloc[int(row_id)]
-        if column in ("BFC correct", "SPECS correct"):
-            return {"backgroundColor": f"rgba({_GREEN if value == 'Yes' else _RED}, 0.25)"}
-        if pd.isna(_pair_speedup):
-            return {"backgroundColor": f"rgba({_GREY}, 0.15)", "color": "gray"}
-        if column == "Speedup, BFC vs SPECS (x)":
-            _strength = min(abs(_log2(value)) / 4, 1)
-            _rgb = _BLUE if value > 1 else _ORANGE
-            return {"backgroundColor": f"rgba({_rgb}, {0.15 + 0.55 * _strength:.2f})"}
-        return {}
-
-    def _swatch(rgb, text):
-        return (
-            f'<span style="display:inline-block;width:0.9em;height:0.9em;border-radius:2px;'
-            f'background:rgba({rgb}, 0.6);margin:0 0.3em 0 1.2em;vertical-align:-0.1em"></span>{text}'
-        )
-
-    _gradient = (
-        '<span style="display:inline-block;vertical-align:middle;font-size:0.85em">'
-        '<span style="display:block;width:16em;height:0.9em;border-radius:2px;'
-        f"background:linear-gradient(to right, rgba({_ORANGE}, 0.70), rgba({_ORANGE}, 0.15) 50%, "
-        f'rgba({_BLUE}, 0.15) 50%, rgba({_BLUE}, 0.70))"></span>'
-        '<span style="display:flex;justify-content:space-between;width:16em">'
-        "<span>SPECS 16x+ faster</span><span>equal</span><span>BFC 16x+ faster</span></span></span>"
-    )
-
-    _legend = mo.md(
-        _gradient
-        + _swatch(_GREEN, "correct")
-        + _swatch(_RED, "not correct")
-        + _swatch(_GREY, "no speedup: timeout, error or out of memory")
-    )
-
-    mo.vstack(
-        [
-            mo.md("## Pairs (speedup > 1: BFC faster, < 1: SPECS faster)"),
-            _legend,
-            mo.ui.table(pairs_table, selection=None, page_size=15, style_cell=_style_cell),
         ]
     )
     return
