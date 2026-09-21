@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from pydantic import TypeAdapter, ValidationError
 from returns.io import IOFailure, IOResult, IOSuccess
+from returns.unsafe import unsafe_perform_io
 
 from .types import (
     ContainmentResult,
@@ -39,6 +40,26 @@ class Suite(StrEnum):
 
 
 Solver = EngineName
+
+REGULAR_SUITES: tuple[Suite, ...] = (
+    Suite.BRANCHING,
+    Suite.OPERATORS,
+    Suite.STAR,
+    Suite.UCFQ,
+)
+SCALE_SUITES: tuple[Suite, ...] = (
+    Suite.BRANCHING_SCALE,
+    Suite.OPERATORS_SCALE,
+    Suite.STAR_SCALE,
+    Suite.UCFQ_SCALE,
+)
+
+
+def suite_frames(suite: Suite) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """The BFC and SPECS frames of a suite; raises if a result file is invalid."""
+    bfc = unsafe_perform_io(result_dataframe(suite, EngineName.BFC).unwrap())
+    specs = unsafe_perform_io(result_dataframe(suite, EngineName.SPECS).unwrap())
+    return bfc, specs
 
 
 def result_dataframe(suite: Suite, solver: Solver) -> IOResult[pd.DataFrame, str]:

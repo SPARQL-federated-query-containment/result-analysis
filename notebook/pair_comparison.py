@@ -342,9 +342,15 @@ def _(bfc_df, mannwhitneyu, mo, np, pd, pooled_times, specs_df, suite):
 
     mo.vstack(
         [
-            summary,
+            mo.ui.table(
+                summary,
+                format_mapping={"Mean (ms)": "{:.0f}".format, "Median (ms)": "{:.0f}".format},
+                selection=None,
+                show_download=False,
+            ),
             mo.md(
-                f"Mann-Whitney U on all pooled timings of suite `{suite.value}`: "
+                f"Suite `{suite.value}`, N = {len(bfc_df)} pairs. "
+                f"Mann-Whitney U on all pooled timings: "
                 f"p {_p_text}. {_conclusion}"
             ),
         ]

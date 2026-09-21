@@ -13,3 +13,6 @@ wheels/
 .zed
 .mypy_cache
 **/*/__marimo__
+
+# Tables and figures written by the overview notebook
+artifacts/

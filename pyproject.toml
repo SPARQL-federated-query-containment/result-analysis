@@ -19,6 +19,7 @@ dependencies = [
 
 [tool.marimo.runtime]
 pythonpath = ["."]
+watcher_on_save = "autorun"
 
 [tool.marimo.language_servers.pylsp]
 enabled = true
