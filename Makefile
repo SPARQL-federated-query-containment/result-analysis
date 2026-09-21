@@ -1,4 +1,4 @@
-.PHONY: notebook lint artifacts export serve-export clean
+.PHONY: notebook lint artifacts artifacts-overview export serve-export clean
 
 RESULTS   := $(wildcard results/*.json)
 TEMPLATES := $(wildcard templates/*.tex)
@@ -12,28 +12,26 @@ lint:
 	uv run ruff check .
 	uv run mypy .
 
-artifacts: artifacts/.stamp
+artifacts: artifacts-overview
 
-artifacts/.stamp: notebook/overview.py $(LIB) $(RESULTS) $(TEMPLATES)
+artifacts-overview: artifacts/overview/.stamp
+
+artifacts/overview/.stamp: Makefile notebook/overview.py $(LIB) $(RESULTS) $(TEMPLATES)
 	uv run python -m notebook.overview
 	touch $@
 
-# Static WebAssembly build for GitHub Pages: one folder per notebook plus a landing page.
-# Each notebook fetches results/ and templates/ from <site>/public/ at startup, so they
-# are copied there with a manifest (a static host has no directory listing).
+# overview is static HTML, pair_comparison is WebAssembly (its controls need Python)
 export: dist/.stamp
 
-dist/.stamp: site/index.html $(NOTEBOOKS) $(LIB) $(RESULTS) $(TEMPLATES)
+dist/.stamp: Makefile site/index.html $(NOTEBOOKS) $(LIB) $(RESULTS) $(TEMPLATES)
 	rm -rf dist
-	mkdir -p dist
+	mkdir -p dist/overview
 	cp site/index.html dist/
-	for nb in $(NOTEBOOKS); do \
-		name=$$(basename $$nb .py); \
-		uv run marimo export html-wasm $$nb -o dist/$$name --mode run; \
-		mkdir -p dist/$$name/public; \
-		cp -r results templates dist/$$name/public/; \
-		(cd dist/$$name/public && find results templates -type f \( -name '*.json' -o -name '*.tex' \) | sort > manifest.txt); \
-	done
+	STATIC_EXPORT=1 uv run marimo export html notebook/overview.py -o dist/overview/index.html
+	uv run marimo export html-wasm notebook/pair_comparison.py -o dist/pair_comparison --mode run
+	mkdir -p dist/pair_comparison/public
+	cp -r results templates dist/pair_comparison/public/
+	cd dist/pair_comparison/public && find results templates -type f \( -name '*.json' -o -name '*.tex' \) | sort > manifest.txt
 	touch $@
 
 # WebAssembly builds must be served over localhost

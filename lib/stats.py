@@ -6,7 +6,7 @@ import pandas as pd
 from scipy.stats import mannwhitneyu
 
 from .datasets import Suite, suite_frames
-from .types import EngineName, Outcome
+from .types import EngineName, Operator, Outcome
 
 ALPHA = 0.05
 
@@ -62,6 +62,43 @@ def compare(bfc: pd.DataFrame, specs: pd.DataFrame) -> tuple[float, EngineName |
     if p_value >= ALPHA:
         return p_value, None
     return p_value, EngineName.BFC if bfc_times.median() < specs_times.median() else EngineName.SPECS
+
+
+def correct_times_by_operator(df: pd.DataFrame) -> dict[Operator, list[float]]:
+    """Every timing, in ms, of the pairs the engine answered correctly, per operator."""
+    return {operator: correct_times(df[df["Operator"] == operator]) for operator in Operator}
+
+
+def outcomes_by_operator(df: pd.DataFrame) -> pd.DataFrame:
+    """How many pairs of each operator ended in each outcome."""
+    counts = pd.crosstab(df["Operator"], df["Outcome"])
+    return counts.reindex(index=list(Operator), columns=list(Outcome), fill_value=0)
+
+
+def operator_table(bfc: pd.DataFrame, specs: pd.DataFrame) -> pd.DataFrame:
+    """One row per operator. The median times cover each engine's correct pairs; the
+    speedup (SPECS mean time per run over BFC's, above 1 when BFC is faster) covers the
+    pairs both engines answered correctly, and is empty when there are none."""
+    rows = []
+    for operator in Operator:
+        wanted = bfc["Operator"] == operator
+        b, s = bfc[wanted], specs[wanted]
+        both = b["Correct"] & s["Correct"]
+        speedup = pd.Series(correct_times(s[both]), dtype=float).mean() / pd.Series(
+            correct_times(b[both]), dtype=float
+        ).mean()
+        rows.append(
+            {
+                "Operator": operator.label,
+                "Pairs": len(b),
+                "BFC correct": int(b["Correct"].sum()),
+                "SPECS correct": int(s["Correct"].sum()),
+                "BFC median (ms)": pd.Series(correct_times(b), dtype=float).median(),
+                "SPECS median (ms)": pd.Series(correct_times(s), dtype=float).median(),
+                "Speedup (x)": speedup,
+            }
+        )
+    return pd.DataFrame(rows)
 
 
 def matched_times_by_size(df: pd.DataFrame) -> dict[int, list[list[float]]]:

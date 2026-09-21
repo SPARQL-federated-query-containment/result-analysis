@@ -554,11 +554,11 @@ def _(pd):
                 archive.writestr(name, data)
         return buffer.getvalue()
 
-    def write_files(files, directory="artifacts"):
+    def write_files(files, directory="artifacts/overview"):
         from pathlib import Path
 
         out = Path(directory)
-        out.mkdir(exist_ok=True)
+        out.mkdir(parents=True, exist_ok=True)
         for name, data in files.items():
             (out / name).write_bytes(data)
 
@@ -624,7 +624,7 @@ def _(
 
 @app.cell
 def _(mo):
-    write_button = mo.ui.run_button(label="Write artifacts to artifacts/", full_width=True)
+    write_button = mo.ui.run_button(label="Write artifacts to artifacts/overview/", full_width=True)
     return (write_button,)
 
 
@@ -632,13 +632,16 @@ def _(mo):
 def _(artifacts, is_web, mo, write_button, write_files, zip_bytes):
     _buttons = [mo.download(zip_bytes(artifacts), "artifacts.zip", label="Download all as .zip")]
     _status = []
-    # A browser cannot write to a folder, so only locally each artifact can also be written to
-    # its own file, by the button or by running the notebook as a script (`make artifacts`).
-    if not is_web:
+    # Only a local session can also write each artifact to its own file, by the button or by
+    # running the notebook as a script (`make artifacts`). A browser cannot write to a folder,
+    # and neither can a static page (`make export` sets STATIC_EXPORT).
+    from os import environ as _environ
+
+    if not is_web and _environ.get("STATIC_EXPORT") != "1":
         _buttons.insert(0, write_button)
         if write_button.value or mo.app_meta().mode == "script":
             write_files(artifacts)
-            _status.append(mo.md(f"Wrote {len(artifacts)} files to `artifacts/`."))
+            _status.append(mo.md(f"Wrote {len(artifacts)} files to `artifacts/overview/`."))
     mo.vstack([mo.vstack(_buttons, align="stretch"), *_status], align="center")
     return
 
