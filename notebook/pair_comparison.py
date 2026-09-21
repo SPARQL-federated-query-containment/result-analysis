@@ -35,6 +35,7 @@ def _(mo):
     import sys
     from pathlib import Path
 
+    is_web = sys.platform == "emscripten"
     if sys.platform == "emscripten":
         # Browser build (GitHub Pages): marimo packages lib/ itself, but the
         # results/ data has no checkout to read from, so fetch it from
@@ -50,7 +51,7 @@ def _(mo):
     from lib.datasets import Suite, result_dataframe
     from lib.types import EngineName
 
-    return EngineName, Suite, result_dataframe
+    return EngineName, Suite, is_web, result_dataframe
 
 
 @app.cell
@@ -66,7 +67,7 @@ def _(Suite, mo):
 def _(dropdown, log_scale, mo, operator_dropdown):
     mo.vstack(
         [
-            mo.md("# Execution time: BFC vs SPECS"),
+            mo.md("# Pair comparison: BFC vs SPECS"),
             mo.hstack([dropdown, operator_dropdown, log_scale], justify="start"),
         ]
     )
@@ -74,11 +75,23 @@ def _(dropdown, log_scale, mo, operator_dropdown):
 
 
 @app.cell
-def _(EngineName, Figure, mpatches, pd):
+def _(EngineName, Figure, is_web, mo, mpatches, pd):
     _ENGINE_COLORS = {
         EngineName.BFC: "#2a78d6",
         EngineName.SPECS: "#eb6834",
     }
+
+    def figure_view(fig):
+        if not is_web:
+            return mo.mpl.interactive(fig)
+        from io import BytesIO
+
+        buffer = BytesIO()
+        fig.savefig(buffer, format="svg")
+        return mo.Html(
+            "<style>.fig svg { max-width: 100%; height: auto; }</style>"
+            f'<div class="fig">{buffer.getvalue().decode()}</div>'
+        )
 
     def pooled_times(df):
         return [t for times in df["Times"] for t in times]
@@ -128,7 +141,7 @@ def _(EngineName, Figure, mpatches, pd):
         )
         return fig
 
-    return pair_labels, pooled_times, violin_figure
+    return figure_view, pair_labels, pooled_times, violin_figure
 
 
 @app.cell
@@ -151,12 +164,12 @@ def _(bfc_df, mo):
 
 
 @app.cell
-def _(bfc_df, log_scale, mo, operator_dropdown, specs_df, violin_figure):
+def _(bfc_df, figure_view, log_scale, mo, operator_dropdown, specs_df, violin_figure):
     _group = bfc_df[bfc_df["Operator"] == operator_dropdown.value]
     mo.vstack(
         [
             mo.md("## Execution time per pair"),
-            mo.mpl.interactive(
+            figure_view(
                 violin_figure(
                     _group,
                     specs_df.loc[_group.index],
