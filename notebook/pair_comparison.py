@@ -63,14 +63,17 @@ def _(Suite, mo):
     return dropdown, log_scale
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Pair comparison: BFC vs SPECS
+    """)
+    return
+
+
 @app.cell
 def _(dropdown, log_scale, mo):
-    mo.vstack(
-        [
-            mo.md("# Pair comparison: BFC vs SPECS"),
-            mo.hstack([dropdown, log_scale], justify="start"),
-        ]
-    )
+    mo.hstack([dropdown, log_scale], justify="start")
     return
 
 
@@ -163,6 +166,14 @@ def _(bfc_df, mo):
     return (operator_dropdown,)
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Operator detail
+    """)
+    return
+
+
 @app.cell
 def _(
     bfc_df,
@@ -176,7 +187,6 @@ def _(
     _group = bfc_df[bfc_df["Operator"] == operator_dropdown.value]
     mo.vstack(
         [
-            mo.md("## Operator detail"),
             operator_dropdown,
             figure_view(
                 violin_figure(
@@ -188,6 +198,16 @@ def _(
             ),
         ]
     )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Pairs
+
+    Speedup > 1: BFC faster. Speedup < 1: SPECS faster.
+    """)
     return
 
 
@@ -256,11 +276,18 @@ def _(bfc_df, mo, pair_labels, pd, specs_df):
 
     mo.vstack(
         [
-            mo.md("## Pairs (speedup > 1: BFC faster, < 1: SPECS faster)"),
             _legend,
             mo.ui.table(pairs_table, selection=None, page_size=15, style_cell=_style_cell),
         ]
     )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Suite overview
+    """)
     return
 
 
@@ -315,7 +342,6 @@ def _(bfc_df, mannwhitneyu, mo, np, pd, pooled_times, specs_df, suite):
 
     mo.vstack(
         [
-            mo.md("# Suite overview"),
             summary,
             mo.md(
                 f"Mann-Whitney U on all pooled timings of suite `{suite.value}`: "
