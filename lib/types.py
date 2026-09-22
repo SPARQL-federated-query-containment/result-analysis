@@ -115,6 +115,26 @@ _QUERY_FAMILY_LABELS: dict[QueryFamily, str] = {
 }
 
 
+class LargeRDFBenchCategory(StrEnum):
+    SIMPLE = "Simple"
+    COMPLEX = "Complex"
+    LARGE = "Large"
+
+
+class LargeRDFBenchSourceSelection(StrEnum):
+    AUTOMATIC = "Automatic source selection"
+    EXPLICIT_SERVICE = "SPARQL 1.1 service clause"
+
+
+class LargeRDFBenchSystem(StrEnum):
+    FEDX_COLD = "FedX (cold)"
+    FEDX_CACHED = "FedX (100% cached)"
+    SPLENDID = "SPLENDID"
+    ANAPSID = "ANAPSID"
+    FEDX_HIBISCUS = "FedX+HiBISCuS"
+    SPLENDID_HIBISCUS = "SPLENDID+HiBISCuS"
+
+
 class Verdict(StrEnum):
     CONTAINED = "contained"
     NOT_CONTAINED = "not contained"

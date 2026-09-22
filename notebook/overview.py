@@ -4,6 +4,7 @@
 #     "marimo",
 #     "matplotlib",
 #     "numpy",
+#     "openpyxl",
 #     "pandas",
 #     "pydantic",
 #     "returns",
@@ -31,6 +32,7 @@ def _():
 @app.cell
 def _():
     from lib.datasets import REGULAR_SUITES, SCALE_SUITES, Suite, suite_frames
+    from lib.largerdfbench import load as load_largerdfbench
     from lib.stats import (
         ALPHA,
         SIGNIFICANCE_TESTS,
@@ -41,17 +43,24 @@ def _():
         summary_table,
         verdict,
     )
-    from lib.types import EngineName
+    from lib.types import (
+        EngineName,
+        LargeRDFBenchCategory,
+        LargeRDFBenchSourceSelection,
+    )
 
     return (
         ALPHA,
         EngineName,
+        LargeRDFBenchCategory,
+        LargeRDFBenchSourceSelection,
         REGULAR_SUITES,
         SCALE_SUITES,
         SIGNIFICANCE_TESTS,
         Suite,
         compare,
         correct_times,
+        load_largerdfbench,
         matched_times_by_size,
         pooled,
         suite_frames,
@@ -120,7 +129,7 @@ def _(all_bfc, all_specs, compare, mo, show_table, summary_table, verdict):
             mo.md(verdict(all_p, all_faster)),
         ]
     )
-    return all_faster, all_p
+    return all_faster, all_p, all_table
 
 
 @app.cell
@@ -488,6 +497,109 @@ def _(Suite, growth_figure, mo):
         [
             mo.md("#### Median execution time of BFC and SPECS on the UCFQ scale suite against size N"),
             fig_ucfq_growth,
+        ]
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Comparison with LargeRDFBench
+    """)
+    return
+
+
+@app.cell
+def _(
+    LargeRDFBenchCategory,
+    LargeRDFBenchSourceSelection,
+    all_table,
+    load_largerdfbench,
+    mo,
+    pd,
+):
+    _bfc_mean = all_table.loc[all_table["Engine"] == "BFC", "Mean (ms)"].item()
+
+    _largerdfbench = load_largerdfbench()
+    _correct = _largerdfbench[_largerdfbench["Complete"] & _largerdfbench["Time (ms)"].notna()]
+
+    def _stat(category, selection):
+        group = _correct[(_correct["Category"] == category) & (_correct["SourceSelection"] == selection)]
+        times = group["Time (ms)"]
+        return times.mean(), len(times)
+
+    _AUTO = LargeRDFBenchSourceSelection.AUTOMATIC
+    _SERVICE = LargeRDFBenchSourceSelection.EXPLICIT_SERVICE
+
+    _rows = []
+    for _category in LargeRDFBenchCategory:
+        _auto_mean, _auto_n = _stat(_category, _AUTO)
+        _service_mean, _service_n = _stat(_category, _SERVICE)
+        _rows.append(
+            {
+                "Category": _category.value,
+                "Automatic mean (ms)": _auto_mean,
+                "Automatic n": _auto_n,
+                "Automatic speedup vs BFC": _auto_mean / _bfc_mean,
+                "Explicit SERVICE mean (ms)": _service_mean,
+                "Explicit SERVICE n": _service_n,
+                "Explicit SERVICE speedup vs BFC": _service_mean / _bfc_mean,
+            }
+        )
+
+    _all_auto = _correct[_correct["SourceSelection"] == _AUTO]["Time (ms)"]
+    _all_service = _correct[_correct["SourceSelection"] == _SERVICE]["Time (ms)"]
+    _rows.append(
+        {
+            "Category": "All",
+            "Automatic mean (ms)": _all_auto.mean(),
+            "Automatic n": len(_all_auto),
+            "Automatic speedup vs BFC": _all_auto.mean() / _bfc_mean,
+            "Explicit SERVICE mean (ms)": _all_service.mean(),
+            "Explicit SERVICE n": len(_all_service),
+            "Explicit SERVICE speedup vs BFC": _all_service.mean() / _bfc_mean,
+        }
+    )
+    largerdfbench_table = pd.DataFrame(_rows)
+
+    from math import log2 as _log2
+
+    _BLUE, _ORANGE = "42, 120, 214", "235, 104, 52"
+    _SPEEDUP_COLUMNS = ("Automatic speedup vs BFC", "Explicit SERVICE speedup vs BFC")
+
+    def _style_cell(row_id, column, value):
+        if column not in _SPEEDUP_COLUMNS:
+            return {}
+        _strength = min(abs(_log2(value)) / 4, 1)
+        _rgb = _BLUE if value > 1 else _ORANGE
+        return {"backgroundColor": f"rgba({_rgb}, {0.15 + 0.55 * _strength:.2f})"}
+
+    _gradient = (
+        '<span style="display:inline-block;vertical-align:middle;font-size:0.85em">'
+        '<span style="display:block;width:16em;height:0.9em;border-radius:2px;'
+        f"background:linear-gradient(to right, rgba({_ORANGE}, 0.70), rgba({_ORANGE}, 0.15) 50%, "
+        f'rgba({_BLUE}, 0.15) 50%, rgba({_BLUE}, 0.70))"></span>'
+        '<span style="display:flex;justify-content:space-between;width:16em">'
+        "<span>LargeRDFBench 16x+ faster</span><span>equal</span><span>BFC 16x+ faster</span></span></span>"
+    )
+
+    mo.vstack(
+        [
+            mo.md(f"### LargeRDFBench, speedup vs BFC's mean ({_bfc_mean:.0f} ms)"),
+            mo.md(_gradient),
+            mo.ui.table(
+                largerdfbench_table,
+                format_mapping={
+                    "Automatic mean (ms)": "{:.0f}".format,
+                    "Automatic speedup vs BFC": "{:.1f}".format,
+                    "Explicit SERVICE mean (ms)": "{:.0f}".format,
+                    "Explicit SERVICE speedup vs BFC": "{:.1f}".format,
+                },
+                selection=None,
+                show_download=False,
+                style_cell=_style_cell,
+            ),
         ]
     )
     return
