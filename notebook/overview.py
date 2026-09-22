@@ -29,45 +29,34 @@ def _():
 
 
 @app.cell
-def _(mo):
-    import sys
-    from pathlib import Path
-
-    is_web = sys.platform == "emscripten"
-    if sys.platform == "emscripten":
-        # Browser build (GitHub Pages): marimo packages lib/ itself, but the
-        # results/ data has no checkout to read from, so fetch it from
-        # <site>/public/ into the in-memory filesystem.
-        from pyodide.http import open_url
-
-        _base = str(mo.notebook_location() / "public")
-        for _name in open_url(f"{_base}/manifest.txt").read().split():
-            _target = Path(_name)
-            _target.parent.mkdir(parents=True, exist_ok=True)
-            _target.write_text(open_url(f"{_base}/{_name}").read())
-
+def _():
     from lib.datasets import REGULAR_SUITES, SCALE_SUITES, Suite, suite_frames
     from lib.stats import (
+        ALPHA,
+        SIGNIFICANCE_TESTS,
         compare,
         correct_times,
         matched_times_by_size,
         pooled,
         summary_table,
+        verdict,
     )
     from lib.types import EngineName
 
     return (
+        ALPHA,
         EngineName,
         REGULAR_SUITES,
         SCALE_SUITES,
+        SIGNIFICANCE_TESTS,
         Suite,
         compare,
         correct_times,
-        is_web,
         matched_times_by_size,
         pooled,
         suite_frames,
         summary_table,
+        verdict,
     )
 
 
@@ -104,25 +93,20 @@ def _(mo):
 
 
 @app.cell
-def _(mo, pd):
+def _(mo):
     def show_table(table):
         """The table with whole-millisecond timings; only the display is rounded."""
         return mo.ui.table(
             table,
-            format_mapping={"Mean (ms)": "{:.0f}".format, "Median (ms)": "{:.0f}".format},
+            format_mapping={
+                "Mean (ms)": "{:.0f}".format,
+                "Median (ms)": "{:.0f}".format,
+            },
             selection=None,
             show_download=False,
         )
 
-    def verdict(p_value, faster):
-        if pd.isna(p_value):
-            return "Cannot compare: an engine has no correct pair."
-        p_text = "< 0.0001" if p_value < 1e-4 else f"= {p_value:.4g}"
-        if faster is None:
-            return f"Mann-Whitney U: p {p_text}, no statistically significant difference."
-        return f"Mann-Whitney U: p {p_text}, statistically significant, **{faster.value.upper()} is faster**."
-
-    return show_table, verdict
+    return (show_table,)
 
 
 @app.cell
@@ -136,7 +120,7 @@ def _(all_bfc, all_specs, compare, mo, show_table, summary_table, verdict):
             mo.md(verdict(all_p, all_faster)),
         ]
     )
-    return
+    return all_faster, all_p
 
 
 @app.cell
@@ -158,7 +142,7 @@ def _(
             mo.md(verdict(regular_p, regular_faster)),
         ]
     )
-    return
+    return regular_faster, regular_p
 
 
 @app.cell
@@ -172,7 +156,7 @@ def _(compare, mo, scale_bfc, scale_specs, show_table, summary_table, verdict):
             mo.md(verdict(scale_p, scale_faster)),
         ]
     )
-    return
+    return scale_faster, scale_p
 
 
 @app.cell(hide_code=True)
@@ -331,36 +315,55 @@ def _(mo):
 
 
 @app.cell
-def _(all_bfc, all_specs, group_violins, mo):
+def _(all_bfc, all_faster, all_p, all_specs, group_violins, mo, verdict):
     fig_all = group_violins(all_bfc, all_specs)
     mo.vstack(
         [
             mo.md(f"### Execution time of BFC and SPECS on all suites, N = {len(all_bfc)} pairs"),
             fig_all,
+            mo.md(verdict(all_p, all_faster)),
         ]
     )
     return
 
 
 @app.cell
-def _(group_violins, mo, regular_bfc, regular_specs):
+def _(
+    group_violins,
+    mo,
+    regular_bfc,
+    regular_faster,
+    regular_p,
+    regular_specs,
+    verdict,
+):
     fig_regular = group_violins(regular_bfc, regular_specs)
     mo.vstack(
         [
             mo.md(f"### Execution time of BFC and SPECS on the regular suites, N = {len(regular_bfc)} pairs"),
             fig_regular,
+            mo.md(verdict(regular_p, regular_faster)),
         ]
     )
     return
 
 
 @app.cell
-def _(group_violins, mo, scale_bfc, scale_specs):
+def _(
+    group_violins,
+    mo,
+    scale_bfc,
+    scale_faster,
+    scale_p,
+    scale_specs,
+    verdict,
+):
     fig_scale = group_violins(scale_bfc, scale_specs)
     mo.vstack(
         [
             mo.md(f"### Execution time of BFC and SPECS on the scale suites, N = {len(scale_bfc)} pairs"),
             fig_scale,
+            mo.md(verdict(scale_p, scale_faster)),
         ]
     )
     return
@@ -499,7 +502,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd):
+def _(ALPHA, SIGNIFICANCE_TESTS, pd):
     from string import Template as _Template
 
     class _LatexTemplate(_Template):
@@ -508,8 +511,16 @@ def _(pd):
 
     def latex_rows(table):
         lines = []
-        for engine, mean, median, *counts in table.itertuples(index=False):
-            cells = [engine.upper(), f"{mean:.0f}", f"{median:.0f}", *map(str, counts)]
+        for (
+            engine, mean, median,
+            correct, unknown, incorrect, timeouts, errors, out_of_memory,
+        ) in table.itertuples(index=False):
+            cells = [
+                engine.upper(),
+                f"{mean:.0f}", f"{median:.0f}",
+                str(correct), str(unknown), str(incorrect),
+                str(timeouts), str(errors), str(out_of_memory),
+            ]
             lines.append("    " + " & ".join(cells) + r" \\")
         return "\n".join(lines)
 
@@ -517,7 +528,11 @@ def _(pd):
         if pd.isna(p_value):
             return "No comparison is possible, an engine has no correct pair."
         p_text = "p < 0.0001" if p_value < 1e-4 else f"p = {p_value:.4g}"
-        test = "Mann-Whitney U on the pairs both engines answered correctly"
+        test = (
+            f"Wilcoxon signed-rank test with Hodges-Lehmann direction (Bonferroni-corrected "
+            f"$\\alpha$ = {ALPHA:.4g} for {SIGNIFICANCE_TESTS} tests) on the pairs both engines "
+            f"answered correctly"
+        )
         if faster is None:
             return f"{test}: ${p_text}$, no significant difference."
         return f"{test}: ${p_text}$, {faster.value.upper()} is significantly faster."
@@ -539,8 +554,16 @@ def _(pd):
             "| " + " | ".join(columns) + " |",
             "| --- " + "| ---: " * (len(columns) - 1) + "|",
         ]
-        for engine, mean, median, *counts in table.itertuples(index=False):
-            cells = [engine.upper(), f"{mean:.0f}", f"{median:.0f}", *map(str, counts)]
+        for (
+            engine, mean, median,
+            correct, unknown, incorrect, timeouts, errors, out_of_memory,
+        ) in table.itertuples(index=False):
+            cells = [
+                engine.upper(),
+                f"{mean:.0f}", f"{median:.0f}",
+                str(correct), str(unknown), str(incorrect),
+                str(timeouts), str(errors), str(out_of_memory),
+            ]
             lines.append("| " + " | ".join(cells) + " |")
         return "\n".join([*lines, "", verdict_text, ""])
 
@@ -629,15 +652,15 @@ def _(mo):
 
 
 @app.cell
-def _(artifacts, is_web, mo, write_button, write_files, zip_bytes):
+def _(artifacts, mo, write_button, write_files, zip_bytes):
     _buttons = [mo.download(zip_bytes(artifacts), "artifacts.zip", label="Download all as .zip")]
     _status = []
     # Only a local session can also write each artifact to its own file, by the button or by
-    # running the notebook as a script (`make artifacts`). A browser cannot write to a folder,
-    # and neither can a static page (`make export` sets STATIC_EXPORT).
+    # running the notebook as a script (`make artifacts`). A static page cannot write to a
+    # folder (`make export` sets STATIC_EXPORT).
     from os import environ as _environ
 
-    if not is_web and _environ.get("STATIC_EXPORT") != "1":
+    if _environ.get("STATIC_EXPORT") != "1":
         _buttons.insert(0, write_button)
         if write_button.value or mo.app_meta().mode == "script":
             write_files(artifacts)

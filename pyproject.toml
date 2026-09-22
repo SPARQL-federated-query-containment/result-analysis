@@ -21,6 +21,9 @@ dependencies = [
 pythonpath = ["."]
 watcher_on_save = "autorun"
 
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
 [tool.marimo.language_servers.pylsp]
 enabled = true
 enable_mypy = true
@@ -38,10 +41,15 @@ disable_error_code = ["no-redef", "no-untyped-def", "no-untyped-call"]
 [tool.ruff.lint.pyupgrade]
 keep-runtime-typing = true
 
+[tool.ruff.lint.per-file-ignores]
+# marimo ends every cell with `return` and writes it back on save
+"notebook/*" = ["PLR1711"]
+
 [dependency-groups]
 dev = [
     "pandas-stubs>=2.0.2.230605",
     "pylsp-mypy>=0.8.0",
+    "pytest>=9.1.1",
     "python-lsp-server>=1.15.0",
     "scipy-stubs>=1.18.1.0",
 ]
