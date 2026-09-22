@@ -16,3 +16,5 @@ wheels/
 
 # Tables and figures written by the overview notebook
 artifacts/
+
+.pytest_cache
