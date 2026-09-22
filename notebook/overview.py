@@ -227,7 +227,8 @@ def _(EngineName, Figure, correct_times, draw_violins, tidy):
 @app.cell
 def _(EngineName, matched_times_by_size, suite_frames):
     def scale_data(suite):
-        """Per size, each engine's timings over the statements it answers correctly at every size."""
+        """Per size, each engine's timings over the statements it answers correctly at every size,
+        and its raw correct count at that size (over all statements, not just the survivors)."""
         engines = (EngineName.BFC, EngineName.SPECS)
         frames = suite_frames(suite)
         by_engine = {engine: matched_times_by_size(df) for engine, df in zip(engines, frames)}
@@ -238,42 +239,44 @@ def _(EngineName, matched_times_by_size, suite_frames):
             for engine in engines
         }
         statements = {engine: len(by_engine[engine][sizes[0]]) for engine in engines}
-        return sizes, timings, statements, total
+        correct_counts = {
+            engine: [int(df[df["Scale"] == size]["Correct"].sum()) for size in sizes]
+            for engine, df in zip(engines, frames)
+        }
+        return sizes, timings, statements, total, correct_counts
 
-    def legend_label(engine, statements):
-        return f"{engine.value.upper()} (n = {statements[engine]} correct at every size)"
-
-    return legend_label, scale_data
+    return (scale_data,)
 
 
 @app.cell
-def _(
-    COLORS,
-    EngineName,
-    Figure,
-    Patch,
-    draw_violins,
-    legend_label,
-    scale_data,
-    tidy,
-):
+def _(COLORS, EngineName, Figure, Patch, draw_violins, scale_data, tidy):
     def size_figure(suite):
         """Violins per size."""
-        sizes, timings, statements, _ = scale_data(suite)
+        sizes, timings, _, total, correct_counts = scale_data(suite)
         fig = Figure(layout="constrained")
         ax = fig.subplots()
         for engine, offset in ((EngineName.BFC, -0.2), (EngineName.SPECS, 0.2)):
             draw_violins(ax, engine, timings[engine], [i + offset for i in range(len(sizes))])
+            for i in range(len(sizes)):
+                ax.annotate(
+                    f"{correct_counts[engine][i]}/{total}",
+                    xy=(i + offset, 1.0),
+                    xycoords=("data", "axes fraction"),
+                    ha="center",
+                    va="bottom",
+                    fontsize=8,
+                    color=COLORS[engine],
+                )
         ax.set_xticks(range(len(sizes)), labels=[str(size) for size in sizes])
         ax.set_xlabel("size N")
         ax.set_ylabel("Execution time (ms)")
         ax.set_yscale("log")
         ax.legend(
             handles=[
-                Patch(color=COLORS[engine], label=legend_label(engine, statements))
+                Patch(color=COLORS[engine], label=engine.value.upper())
                 for engine in (EngineName.BFC, EngineName.SPECS)
             ],
-            loc="upper left",
+            loc="best",
             frameon=False,
         )
         tidy(ax)
@@ -283,10 +286,10 @@ def _(
 
 
 @app.cell
-def _(COLORS, EngineName, Figure, legend_label, np, scale_data, tidy):
+def _(COLORS, EngineName, Figure, np, scale_data, tidy):
     def growth_figure(suite):
-        """Median time (inter-quartile band) against size, both axes linear."""
-        sizes, timings, statements, _ = scale_data(suite)
+        """Median time (inter-quartile band) against size, log y-axis."""
+        sizes, timings, _, total, correct_counts = scale_data(suite)
         fig = Figure(layout="constrained")
         ax = fig.subplots()
         for engine in (EngineName.BFC, EngineName.SPECS):
@@ -302,13 +305,27 @@ def _(COLORS, EngineName, Figure, legend_label, np, scale_data, tidy):
                 marker="o",
                 markersize=3,
                 color=COLORS[engine],
-                label=legend_label(engine, statements),
+                label=engine.value.upper(),
             )
+            for size, median, count in zip(sizes, medians, correct_counts[engine]):
+                ax.annotate(
+                    f"{count}/{total}",
+                    xy=(size, median),
+                    xytext=(0, 10 if engine == EngineName.BFC else -18),
+                    textcoords="offset points",
+                    ha="center",
+                    fontsize=8,
+                    color=COLORS[engine],
+                )
             ax.fill_between(sizes, low, high, color=COLORS[engine], alpha=0.2, linewidth=0)
+        ax.set_xscale("log")
         ax.set_xticks(sizes)
+        ax.xaxis.set_major_formatter("{x:g}")
+        ax.minorticks_off()
         ax.set_xlabel("size N")
         ax.set_ylabel("Execution time (ms)")
-        ax.legend(loc="upper left", frameon=False)
+        ax.set_yscale("log")
+        ax.legend(loc="best", frameon=False)
         tidy(ax)
         return fig
 
@@ -380,7 +397,7 @@ def _(
 
 @app.cell(hide_code=True)
 def _(Suite, mo, scale_data):
-    _, _, _, _total = scale_data(Suite.BRANCHING_SCALE)
+    _, _, _, _total, _ = scale_data(Suite.BRANCHING_SCALE)
     mo.md(f"### Branching scale suite, {_total} pairs per size")
     return
 
@@ -411,7 +428,7 @@ def _(Suite, growth_figure, mo):
 
 @app.cell(hide_code=True)
 def _(Suite, mo, scale_data):
-    _, _, _, _total = scale_data(Suite.OPERATORS_SCALE)
+    _, _, _, _total, _ = scale_data(Suite.OPERATORS_SCALE)
     mo.md(f"### Chain scale suite, {_total} pairs per size")
     return
 
@@ -442,7 +459,7 @@ def _(Suite, growth_figure, mo):
 
 @app.cell(hide_code=True)
 def _(Suite, mo, scale_data):
-    _, _, _, _total = scale_data(Suite.STAR_SCALE)
+    _, _, _, _total, _ = scale_data(Suite.STAR_SCALE)
     mo.md(f"### Star scale suite, {_total} pairs per size")
     return
 
@@ -473,7 +490,7 @@ def _(Suite, growth_figure, mo):
 
 @app.cell(hide_code=True)
 def _(Suite, mo, scale_data):
-    _, _, _, _total = scale_data(Suite.UCFQ_SCALE)
+    _, _, _, _total, _ = scale_data(Suite.UCFQ_SCALE)
     mo.md(f"### UCFQ scale suite, {_total} pairs per size")
     return
 
