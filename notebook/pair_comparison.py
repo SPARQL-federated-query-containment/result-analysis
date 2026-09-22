@@ -21,13 +21,11 @@ app = marimo.App(width="medium")
 def _():
     import marimo as mo
     import matplotlib.patches as mpatches
-    import numpy as np
     import pandas as pd
     from matplotlib.figure import Figure
     from returns.unsafe import unsafe_perform_io
-    from scipy.stats import mannwhitneyu
 
-    return Figure, mannwhitneyu, mo, mpatches, np, pd, unsafe_perform_io
+    return Figure, mo, mpatches, pd, unsafe_perform_io
 
 
 @app.cell
@@ -49,9 +47,19 @@ def _(mo):
             _target.write_text(open_url(f"{_base}/{_name}").read())
 
     from lib.datasets import Suite, result_dataframe
+    from lib.stats import compare, pair_speedups, summary_table, verdict
     from lib.types import EngineName
 
-    return EngineName, Suite, is_web, result_dataframe
+    return (
+        EngineName,
+        Suite,
+        compare,
+        is_web,
+        pair_speedups,
+        result_dataframe,
+        summary_table,
+        verdict,
+    )
 
 
 @app.cell
@@ -96,9 +104,6 @@ def _(EngineName, Figure, is_web, mo, mpatches, pd):
             f'<div class="fig">{buffer.getvalue().decode()}</div>'
         )
 
-    def pooled_times(df):
-        return [t for times in df["Times"] for t in times]
-
     def pair_labels(df):
         return [
             f"#{index} {family.label}" + ("" if pd.isna(scale) else f" ×{int(scale)}")
@@ -115,17 +120,20 @@ def _(EngineName, Figure, is_web, mo, mpatches, pd):
         ):
             drawn = [
                 (position + offset, list(times))
-                for position, times in enumerate(df["Times"], start=1)
-                if len(times) > 0
+                for position, (times, correct) in enumerate(zip(df["Times"], df["Correct"]), start=1)
+                if correct
             ]
             if not drawn:
                 continue
             positions, data = zip(*drawn)
-            parts = ax.violinplot(list(data), positions=list(positions), widths=0.35, showmeans=True)
+            parts = ax.violinplot(
+                list(data), positions=list(positions), widths=0.35, showmedians=True, showextrema=False
+            )
             for body in parts["bodies"]:
                 body.set_facecolor(_ENGINE_COLORS[engine])
                 body.set_edgecolor(_ENGINE_COLORS[engine])
                 body.set_alpha(0.7)
+            parts["cmedians"].set_color(_ENGINE_COLORS[engine])
 
         ax.set_xticks(range(1, len(bfc) + 1), labels=pair_labels(bfc), rotation=45, ha="right", fontsize=9)
         ax.set_ylabel("Execution time (ms)", fontsize=10)
@@ -134,17 +142,19 @@ def _(EngineName, Figure, is_web, mo, mpatches, pd):
             ax.set_yscale("log")
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
+        ax.set_axisbelow(True)
+        ax.grid(True, alpha=0.3)
         ax.legend(
             handles=[
-                mpatches.Patch(color=_ENGINE_COLORS[EngineName.BFC], label="bfc"),
-                mpatches.Patch(color=_ENGINE_COLORS[EngineName.SPECS], label="specs"),
+                mpatches.Patch(color=_ENGINE_COLORS[EngineName.BFC], label="BFC"),
+                mpatches.Patch(color=_ENGINE_COLORS[EngineName.SPECS], label="SPECS"),
             ],
             loc="upper right",
             fontsize=9,
         )
         return fig
 
-    return figure_view, pair_labels, pooled_times, violin_figure
+    return figure_view, pair_labels, violin_figure
 
 
 @app.cell
@@ -169,7 +179,9 @@ def _(bfc_df, mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    # Operator detail
+    ## Operator detail
+
+    Violins show the timings of the pairs an engine answered correctly; a pair it did not answer correctly has no violin.
     """)
     return
 
@@ -204,31 +216,22 @@ def _(
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    # Pairs
+    ## Pairs
 
-    Speedup > 1: BFC faster. Speedup < 1: SPECS faster.
+    Speedup of BFC over SPECS = SPECS time / BFC time. Above 1: BFC faster. Below 1: SPECS faster.
     """)
     return
 
 
 @app.cell
-def _(bfc_df, mo, pair_labels, pd, specs_df):
-    def _time_per_run(df):
-        return df["Times"].map(lambda times: sum(times) / len(times) if len(times) > 0 else float("nan"))
-
-    _failed = (
-        bfc_df["Timeouts"] | bfc_df["Errors"] | bfc_df["OutOfMemory"]
-        | specs_df["Timeouts"] | specs_df["Errors"] | specs_df["OutOfMemory"]
-    )
-    _speedup = (_time_per_run(specs_df) / _time_per_run(bfc_df)).where(~_failed)
-
+def _(bfc_df, mo, pair_labels, pair_speedups, pd, specs_df):
     pairs_table = pd.DataFrame(
         {
             "Operator": bfc_df["Operator"].map(lambda operator: operator.label),
             "Pair": pair_labels(bfc_df),
             "BFC correct": bfc_df["Correct"].map({True: "Yes", False: "No"}),
             "SPECS correct": specs_df["Correct"].map({True: "Yes", False: "No"}),
-            "Speedup, BFC vs SPECS (x)": _speedup.astype(float).round(2),
+            "Speedup of BFC over SPECS": pair_speedups(bfc_df, specs_df).round(2),
         }
     )
 
@@ -238,14 +241,14 @@ def _(bfc_df, mo, pair_labels, pd, specs_df):
     _GREEN, _RED, _AMBER, _GREY = "46, 160, 67", "218, 54, 51", "237, 161, 0", "128, 128, 128"
 
     def _style_cell(row_id, column, value):
-        _pair_speedup = pairs_table["Speedup, BFC vs SPECS (x)"].iloc[int(row_id)]
+        _pair_speedup = pairs_table["Speedup of BFC over SPECS"].iloc[int(row_id)]
         if column in ("BFC correct", "SPECS correct"):
             _outcome = (bfc_df if column == "BFC correct" else specs_df)["Outcome"].iloc[int(row_id)]
             _rgb = _GREEN if value == "Yes" else _AMBER if _outcome == "unknown" else _RED
             return {"backgroundColor": f"rgba({_rgb}, 0.25)"}
         if pd.isna(_pair_speedup):
             return {"backgroundColor": f"rgba({_GREY}, 0.15)", "color": "gray"}
-        if column == "Speedup, BFC vs SPECS (x)":
+        if column == "Speedup of BFC over SPECS":
             _strength = min(abs(_log2(value)) / 4, 1)
             _rgb = _BLUE if value > 1 else _ORANGE
             return {"backgroundColor": f"rgba({_rgb}, {0.15 + 0.55 * _strength:.2f})"}
@@ -270,8 +273,8 @@ def _(bfc_df, mo, pair_labels, pd, specs_df):
         _gradient
         + _swatch(_GREEN, "correct")
         + _swatch(_AMBER, "unknown")
-        + _swatch(_RED, "incorrect, timeout or out of memory")
-        + _swatch(_GREY, "no speedup: timeout, error or out of memory")
+        + _swatch(_RED, "incorrect, error, timeout or out of memory")
+        + _swatch(_GREY, "no speedup: not answered correctly by both engines")
     )
 
     mo.vstack(
@@ -286,80 +289,29 @@ def _(bfc_df, mo, pair_labels, pd, specs_df):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    # Suite overview
+    ## Suite overview
     """)
     return
 
 
 @app.cell
-def _(bfc_df, mannwhitneyu, mo, np, pd, pooled_times, specs_df, suite):
-    _bfc_times = pooled_times(bfc_df)
-    _specs_times = pooled_times(specs_df)
-
-    if len(_bfc_times) > 0 and len(_specs_times) > 0:
-        _, _p_value = mannwhitneyu(_bfc_times, _specs_times, alternative="two-sided")
-    else:
-        _p_value = float("nan")
-
-    _alpha = 0.05
-    _p_text = "< 0.0001" if _p_value < 1e-4 else f"= {_p_value:.4g}"
-    if pd.isna(_p_value):
-        _conclusion = "Cannot compare: one engine has no timings."
-    else:
-        _medians = {"bfc": np.median(_bfc_times), "specs": np.median(_specs_times)}
-        _faster = "bfc" if _medians["bfc"] < _medians["specs"] else "specs"
-        _detail = f"median {_medians['bfc']:.0f} ms (bfc) vs {_medians['specs']:.0f} ms (specs)"
-        if _p_value < _alpha:
-            _conclusion = (
-                f"The difference is **statistically significant** (p < {_alpha}): "
-                f"**{_faster} is faster** ({_detail})."
-            )
-        else:
-            _conclusion = (
-                f"The difference is **not statistically significant** (p ≥ {_alpha}): "
-                f"neither engine can be called faster ({_detail})."
-            )
-
-    summary = pd.DataFrame(
-        [
-            {
-                "Engine": _engine,
-                "Mean (ms)": np.mean(_times_) if _times_ else float("nan"),
-                "Median (ms)": np.median(_times_) if _times_ else float("nan"),
-                "Correct": int(_df["Correct"].sum()),
-                "Unknown": int((_df["Outcome"] == "unknown").sum()),
-                "Incorrect": int(_df["Incorrect"].sum()),
-                "Timeouts": int(_df["Timeouts"].sum()),
-                "Errors": int(_df["Errors"].sum()),
-                "OutOfMemory": int(_df["OutOfMemory"].sum()),
-            }
-            for _engine, _df, _times_ in (
-                ("bfc", bfc_df, _bfc_times),
-                ("specs", specs_df, _specs_times),
-            )
-        ]
-    )
-
+def _(bfc_df, compare, mo, specs_df, suite, summary_table, verdict):
+    _p_value, _faster = compare(bfc_df, specs_df)
     mo.vstack(
         [
+            mo.md(f"### Suite `{suite.value}`, N = {len(bfc_df)} pairs"),
             mo.ui.table(
-                summary,
-                format_mapping={"Mean (ms)": "{:.0f}".format, "Median (ms)": "{:.0f}".format},
+                summary_table(bfc_df, specs_df),
+                format_mapping={
+                    "Mean (ms)": "{:.0f}".format,
+                    "Median (ms)": "{:.0f}".format,
+                },
                 selection=None,
                 show_download=False,
             ),
-            mo.md(
-                f"Suite `{suite.value}`, N = {len(bfc_df)} pairs. "
-                f"Mann-Whitney U on all pooled timings: "
-                f"p {_p_text}. {_conclusion}"
-            ),
+            mo.md(verdict(_p_value, _faster)),
         ]
     )
-    return
-
-
-@app.cell
-def _():
     return
 
 
