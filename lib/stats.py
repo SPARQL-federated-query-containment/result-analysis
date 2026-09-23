@@ -12,10 +12,11 @@ from scipy.stats import wilcoxon
 from .datasets import Suite, suite_frames
 from .types import EngineName, Operator, Outcome
 
-# Bonferroni correction: this evaluation reports 11 significance tests (the overview's
-# all/regular/scale tables, and one per suite in pair_comparison), so each test uses
-# alpha/11 to keep the overall false-positive rate across all of them at 5%.
-SIGNIFICANCE_TESTS = 11
+# Bonferroni correction: this evaluation reports 12 significance tests (the overview's
+# all/regular/scale speedup tables, one per suite in pair_comparison, and the overview's
+# pooled variability test), so each test uses alpha/12 to keep the overall false-positive
+# rate across all of them at 5%.
+SIGNIFICANCE_TESTS = 12
 ALPHA = 0.05 / SIGNIFICANCE_TESTS
 
 
@@ -70,6 +71,31 @@ def summary_table(bfc: pd.DataFrame, specs: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def within_repetition_std(df: pd.DataFrame) -> float:
+    """The average, across every correctly-answered pair, of that pair's standard
+    deviation across its own repeated runs (ms)."""
+    deviations: list[float] = []
+    for times, correct in zip(df["Times"], df["Correct"]):
+        if not correct:
+            continue
+        deviations.append(statistics.stdev(times))
+    return statistics.mean(deviations)
+
+
+def tail_ratio(df: pd.DataFrame) -> float:
+    """How much longer the tail of the engine's correct-pair timings is than
+    typical: the 95th percentile over the median (ms)."""
+    times = pd.Series(correct_times(df), dtype=float)
+    return float(times.quantile(0.95) / times.median())
+
+
+def head_ratio(df: pd.DataFrame) -> float:
+    """How much shorter the head of the engine's correct-pair timings is than
+    typical: the median over the 5th percentile (ms)."""
+    times = pd.Series(correct_times(df), dtype=float)
+    return float(times.median() / times.quantile(0.05))
+
+
 def _hodges_lehmann_shift(values: pd.Series) -> float:
     """The Hodges-Lehmann estimator of `values`: the median of every pair's average
     (a value may pair with itself). This is the standard companion statistic to the
@@ -82,17 +108,26 @@ def _hodges_lehmann_shift(values: pd.Series) -> float:
     return statistics.median(walsh_averages)
 
 
+def _signed_rank_test(log_ratios: pd.Series) -> tuple[float, float | None]:
+    """Wilcoxon signed-rank test on paired log-ratios: the p-value, and the
+    Hodges-Lehmann shift in log space when the difference is significant, else
+    None."""
+    if log_ratios.empty:
+        return float("nan"), None
+    p_value = float(wilcoxon(log_ratios).pvalue)
+    if p_value >= ALPHA:
+        return p_value, None
+    return p_value, _hodges_lehmann_shift(log_ratios)
+
+
 def statistical_significance(bfc: pd.DataFrame, specs: pd.DataFrame) -> tuple[float, EngineName | None]:
     """Statistical significance using Wilcoxon signed-rank test on the log of the per-pair speedups (see
     `pair_speedups`), over the pairs both engines answered correctly, and the
     faster engine when the difference is significant, else None."""
     log_speedups = pair_speedups(bfc, specs).dropna().map(math.log)
-    if log_speedups.empty:
-        return float("nan"), None
-    p_value = float(wilcoxon(log_speedups).pvalue)
-    if p_value >= ALPHA:
+    p_value, shift = _signed_rank_test(log_speedups)
+    if shift is None:
         return p_value, None
-    shift = _hodges_lehmann_shift(log_speedups)
     return p_value, EngineName.BFC if shift > 0 else EngineName.SPECS
 
 
@@ -108,6 +143,32 @@ def statistical_significance_verdict(p_value: float, faster: EngineName | None) 
     if faster is None:
         return f"{test}: p {p_text}, no statistically significant difference."
     return f"{test}: p {p_text}, statistically significant, **{faster.value.upper()} is faster**."
+
+
+def variability_significance(bfc: pd.DataFrame, specs: pd.DataFrame) -> tuple[float, EngineName | None]:
+    """Statistical significance using Wilcoxon signed-rank test on the log of the
+    per-pair standard deviation ratios (see `pair_std_ratios`), over the pairs both
+    engines answered correctly with more than one run, and the more variable engine
+    when the difference is significant, else None."""
+    log_ratios = pair_std_ratios(bfc, specs).dropna().map(math.log)
+    p_value, shift = _signed_rank_test(log_ratios)
+    if shift is None:
+        return p_value, None
+    return p_value, EngineName.BFC if shift > 0 else EngineName.SPECS
+
+
+def variability_significance_verdict(p_value: float, more_variable: EngineName | None) -> str:
+    """The result of `variability_significance` as a sentence."""
+    if math.isnan(p_value):
+        return "Cannot compare: an engine has no pair run more than once."
+    p_text = f"= {p_value:.4g}"
+    test = (
+        f"Wilcoxon signed-rank test with Hodges-Lehmann direction "
+        f"(Bonferroni-corrected α = {ALPHA:.4g} for {SIGNIFICANCE_TESTS} tests)"
+    )
+    if more_variable is None:
+        return f"{test}: p {p_text}, no statistically significant difference in variability."
+    return f"{test}: p {p_text}, statistically significant, **{more_variable.value.upper()} is more variable**."
 
 
 def correct_times_by_operator(df: pd.DataFrame) -> dict[Operator, list[float]]:
@@ -138,6 +199,28 @@ def pair_speedups(bfc: pd.DataFrame, specs: pd.DataFrame) -> pd.Series:
     series = bfc["Correct"] & specs["Correct"]
     return pd.Series(
         list(map(_pair_speedup, zip(bfc["Times"], specs["Times"], series))),
+        index=bfc.index,
+        dtype=float,
+    )
+
+
+def _pair_std_ratio(item: tuple[list[float], list[float], bool]) -> float:
+    b_times, s_times, ok = item
+    if not ok or len(b_times) < 2 or len(s_times) < 2:
+        return float("nan")
+    b_std, s_std = statistics.stdev(b_times), statistics.stdev(s_times)
+    if s_std == 0:
+        return float("nan")
+    return b_std / s_std
+
+
+def pair_std_ratios(bfc: pd.DataFrame, specs: pd.DataFrame) -> pd.Series:
+    """Per pair, BFC's within-repetition standard deviation over SPECS's, so a value
+    above 1 means BFC is more variable. NaN unless both engines answered the pair
+    correctly with more than one run."""
+    series = bfc["Correct"] & specs["Correct"]
+    return pd.Series(
+        list(map(_pair_std_ratio, zip(bfc["Times"], specs["Times"], series))),
         index=bfc.index,
         dtype=float,
     )

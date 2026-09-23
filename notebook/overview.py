@@ -38,11 +38,16 @@ def _():
         ALPHA,
         SIGNIFICANCE_TESTS,
         correct_times,
+        head_ratio,
         matched_times_by_size,
         pooled,
         statistical_significance,
         statistical_significance_verdict,
         summary_table,
+        tail_ratio,
+        variability_significance,
+        variability_significance_verdict,
+        within_repetition_std,
     )
     from lib.types import (
         EngineName,
@@ -60,6 +65,7 @@ def _():
         SIGNIFICANCE_TESTS,
         Suite,
         correct_times,
+        head_ratio,
         largerdfbench_execution_times,
         matched_times_by_size,
         pooled,
@@ -67,6 +73,10 @@ def _():
         statistical_significance_verdict,
         suite_frames,
         summary_table,
+        tail_ratio,
+        variability_significance,
+        variability_significance_verdict,
+        within_repetition_std,
     )
 
 
@@ -616,6 +626,61 @@ def _(
                 show_download=False,
                 style_cell=_style_cell,
             ),
+        ]
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Variability
+
+    The average, per engine, of a correctly-answered pair's standard deviation
+    across its own repeated runs, and how much shorter/longer its timing head and
+    tail are than typical (median over 5th percentile, 95th percentile over median).
+    """)
+    return
+
+
+@app.cell
+def _(
+    EngineName,
+    all_bfc,
+    all_specs,
+    head_ratio,
+    mo,
+    pd,
+    tail_ratio,
+    variability_significance,
+    variability_significance_verdict,
+    within_repetition_std,
+):
+    _rows = []
+    for _engine, _df in ((EngineName.BFC, all_bfc), (EngineName.SPECS, all_specs)):
+        _rows.append(
+            {
+                "Engine": _engine.value.upper(),
+                "Within-repetition std (ms)": within_repetition_std(_df),
+                "Head ratio (median/p5)": head_ratio(_df),
+                "Tail ratio (p95/median)": tail_ratio(_df),
+            }
+        )
+    std_table = pd.DataFrame(_rows)
+    _p_value, _more_variable = variability_significance(all_bfc, all_specs)
+    mo.vstack(
+        [
+            mo.ui.table(
+                std_table,
+                format_mapping={
+                    "Within-repetition std (ms)": "{:.0f}".format,
+                    "Head ratio (median/p5)": "{:.1f}".format,
+                    "Tail ratio (p95/median)": "{:.1f}".format,
+                },
+                selection=None,
+                show_download=False,
+            ),
+            mo.md(variability_significance_verdict(_p_value, _more_variable)),
         ]
     )
     return
