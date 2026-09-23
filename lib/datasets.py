@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 from pydantic import TypeAdapter, ValidationError
 from returns.io import IOFailure, IOResult, IOSuccess
-from returns.unsafe import unsafe_perform_io
 
 from .types import (
     ContainmentResult,
@@ -38,9 +37,6 @@ class Suite(StrEnum):
     UCFQ = "ucfq"
     UCFQ_SCALE = "ucfq-scale"
 
-
-Solver = EngineName
-
 REGULAR_SUITES: tuple[Suite, ...] = (
     Suite.BRANCHING,
     Suite.OPERATORS,
@@ -55,18 +51,20 @@ SCALE_SUITES: tuple[Suite, ...] = (
 )
 
 
-def suite_frames(suite: Suite) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """The BFC and SPECS frames of a suite; raises if a result file is invalid."""
-    bfc = unsafe_perform_io(result_dataframe(suite, EngineName.BFC).unwrap())
-    specs = unsafe_perform_io(result_dataframe(suite, EngineName.SPECS).unwrap())
-    return bfc, specs
+def suite_frames(suite: Suite) -> IOResult[tuple[pd.DataFrame, pd.DataFrame], str]:
+    """The BFC and SPECS frames of a suite."""
+    return IOResult.do(
+        (bfc, specs)
+        for bfc in result_dataframe(suite, EngineName.BFC)
+        for specs in result_dataframe(suite, EngineName.SPECS)
+    )
 
 
-def result_dataframe(suite: Suite, solver: Solver) -> IOResult[pd.DataFrame, str]:
+def result_dataframe(suite: Suite, solver: EngineName) -> IOResult[pd.DataFrame, str]:
     return _load_result_file(suite, solver).bind(_build)
 
 
-def _load_result_file(suite: Suite, solver: Solver) -> IOResult[ResultFile, str]:
+def _load_result_file(suite: Suite, solver: EngineName) -> IOResult[ResultFile, str]:
     file = RESULTS_PATH.joinpath(f"{solver}.{suite}.json")
     with open(file, "r") as f:
         try:
@@ -110,7 +108,7 @@ class _Execution:
     out_of_memory: bool
 
 
-def _execution_of(value: PairResult) -> _Execution:
+def _generate_execution(value: PairResult) -> _Execution:
     outcome, verdict, expected = value["outcome"], value["verdict"], value["expected"]
     if value["outcome"] == Outcome.TIMEOUT:
         return _Execution(outcome, verdict, expected, [], True, False, False, False, False)
@@ -154,7 +152,7 @@ def _build(data: ResultFile) -> IOResult[pd.DataFrame, str]:
         scales.append(template.scale)
         operators.append(template.operator)
 
-        execution = _execution_of(value)
+        execution = _generate_execution(value)
         outcomes.append(execution.outcome)
         verdicts.append(execution.verdict)
         expecteds.append(execution.expected)

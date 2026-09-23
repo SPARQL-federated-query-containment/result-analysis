@@ -9,7 +9,6 @@ from pathlib import Path
 import pandas as pd
 from returns.io import IOFailure, IOResult
 from returns.result import Failure, Result, Success
-from returns.unsafe import unsafe_perform_io
 
 from .types import (
     LargeRDFBenchCategory,
@@ -43,16 +42,14 @@ _QUERIES: dict[LargeRDFBenchCategory, list[str]] = {
 # The explicit-SERVICE sheet labels the same 8 Large queries B1..B8, not L1..L8.
 _LARGE_QUERIES_EXPLICIT_SERVICE = [f"B{i}" for i in range(1, 9)]
 
+# A cell is bare "TO"/"RE"/"ZR", a bare number, or a number with a completeness
+# percentage, e.g. "123735 (2.73 %)".
 _CELL = re.compile(r"^(TO|RE|ZR|\d+)\s*(?:\(([\d.]+)\s*%\))?$")
 
 
 def _parse_cell(cell: object) -> Result[tuple[float | None, bool], str]:
-    """A raw spreadsheet cell: its time in ms (None for a timeout, runtime error or
-    zero-result marker), and whether the sheet shows it as fully complete (no
-    percentage shown) -- several "fast" Large-query times are near-instant wrong or
-    empty answers, so a partial percentage does not count as complete. Failure only
-    when the cell's format itself is unrecognised, not for a timeout/error/partial
-    result -- those are valid data, filtered on later via the Complete column."""
+    """Time in ms (None for TO/RE/ZR), and complete unless a percentage is shown.
+    Fails only on an unrecognised format."""
     if isinstance(cell, (int, float)) and not pd.isna(cell):
         return Success((float(cell), True))
     match = _CELL.match(str(cell).strip())
@@ -103,17 +100,12 @@ def _build(path: Path) -> Result[pd.DataFrame, str]:
     return Success(pd.DataFrame(rows))
 
 
-def _load(path: Path) -> IOResult[pd.DataFrame, str]:
+def execution_times(path: Path = RESULTS_PATH) -> IOResult[pd.DataFrame, str]:
+    """Every (category, source selection, system, query) cell of the raw evaluation
+    spreadsheet, tidy: one row per cell. Columns: Category, SourceSelection, System,
+    Query, Time (ms) (NaN for a timeout or runtime error), Complete (bool)."""
     try:
         result = _build(path)
     except FileNotFoundError as e:
         return IOFailure(str(e))
     return IOResult.from_result(result)
-
-
-def load(path: Path = RESULTS_PATH) -> pd.DataFrame:
-    """Every (category, source selection, system, query) cell of the raw evaluation
-    spreadsheet, tidy: one row per cell. Columns: Category, SourceSelection, System,
-    Query, Time (ms) (NaN for a timeout or runtime error), Complete (bool). Raises if
-    the spreadsheet is missing or malformed."""
-    return unsafe_perform_io(_load(path).unwrap())

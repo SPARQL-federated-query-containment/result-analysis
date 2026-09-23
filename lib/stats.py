@@ -5,6 +5,8 @@ import statistics
 from collections.abc import Sequence
 
 import pandas as pd
+from returns.io import IOFailure, IOResult, IOSuccess
+from returns.result import Failure, Success
 from scipy.stats import wilcoxon
 
 from .datasets import Suite, suite_frames
@@ -17,22 +19,34 @@ SIGNIFICANCE_TESTS = 11
 ALPHA = 0.05 / SIGNIFICANCE_TESTS
 
 
-def pooled(suites: Sequence[Suite]) -> tuple[pd.DataFrame, pd.DataFrame]:
+def pooled(suites: Sequence[Suite]) -> IOResult[tuple[pd.DataFrame, pd.DataFrame], str]:
     """The BFC and SPECS frames of several suites stacked, still aligned pair for pair."""
-    frames = [suite_frames(suite) for suite in suites]
-    bfc = pd.concat([bfc for bfc, _ in frames], ignore_index=True)
-    specs = pd.concat([specs for _, specs in frames], ignore_index=True)
-    return bfc, specs
+    bfc_frames: list[pd.DataFrame] = []
+    specs_frames: list[pd.DataFrame] = []
+    for suite in suites:
+        match suite_frames(suite):
+            case IOSuccess(Success((bfc, specs))):
+                bfc_frames.append(bfc)
+                specs_frames.append(specs)
+            case IOFailure(Failure(message)):
+                return IOFailure(message)
+    return IOSuccess(
+        (
+            pd.concat(bfc_frames, ignore_index=True),
+            pd.concat(specs_frames, ignore_index=True),
+        )
+    )
 
 
 def correct_times(df: pd.DataFrame) -> list[float]:
     """Every timing, in ms, of the pairs the engine answered correctly."""
-    return [
-        float(time)
-        for times, correct in zip(df["Times"], df["Correct"])
-        if correct
-        for time in times
-    ]
+    resp: list[float] = []
+    for times, correct in zip(df["Times"], df["Correct"]):
+        if not correct:
+            continue
+        for time in times:
+            resp.append(float(time))
+    return resp
 
 
 def summary_table(bfc: pd.DataFrame, specs: pd.DataFrame) -> pd.DataFrame:
@@ -57,17 +71,19 @@ def summary_table(bfc: pd.DataFrame, specs: pd.DataFrame) -> pd.DataFrame:
 
 
 def _hodges_lehmann_shift(values: pd.Series) -> float:
-    """Sign and rough size of the Hodges-Lehmann estimator: the median of every
-    pairwise average of values (including a value with itself) — the standard
-    companion statistic to the Wilcoxon signed-rank test, used to say which
-    direction a significant result points in."""
+    """The Hodges-Lehmann estimator of `values`: the median of every pair's average
+    (a value may pair with itself). This is the standard companion statistic to the
+    Wilcoxon signed-rank test; its sign says which direction a significant result
+    points in."""
     data = [float(v) for v in values]
-    walsh_averages = [(data[i] + data[j]) / 2 for i in range(len(data)) for j in range(i, len(data))]
+    walsh_averages = [
+        (data[i] + data[j]) / 2 for i in range(len(data)) for j in range(i, len(data))
+    ]
     return statistics.median(walsh_averages)
 
 
-def compare(bfc: pd.DataFrame, specs: pd.DataFrame) -> tuple[float, EngineName | None]:
-    """Paired Wilcoxon signed-rank test on the log of the per-pair speedups (see
+def statistical_significance(bfc: pd.DataFrame, specs: pd.DataFrame) -> tuple[float, EngineName | None]:
+    """Statistical significance using Wilcoxon signed-rank test on the log of the per-pair speedups (see
     `pair_speedups`), over the pairs both engines answered correctly, and the
     faster engine when the difference is significant, else None."""
     log_speedups = pair_speedups(bfc, specs).dropna().map(math.log)
@@ -80,11 +96,11 @@ def compare(bfc: pd.DataFrame, specs: pd.DataFrame) -> tuple[float, EngineName |
     return p_value, EngineName.BFC if shift > 0 else EngineName.SPECS
 
 
-def verdict(p_value: float, faster: EngineName | None) -> str:
-    """The result of `compare` as a sentence."""
+def statistical_significance_verdict(p_value: float, faster: EngineName | None) -> str:
+    """The result of `statistical_significance` as a sentence."""
     if math.isnan(p_value):
         return "Cannot compare: an engine has no correct pair."
-    p_text = "< 0.0001" if p_value < 1e-4 else f"= {p_value:.4g}"
+    p_text = f"= {p_value:.4g}"
     test = (
         f"Wilcoxon signed-rank test with Hodges-Lehmann direction "
         f"(Bonferroni-corrected α = {ALPHA:.4g} for {SIGNIFICANCE_TESTS} tests)"
@@ -96,7 +112,9 @@ def verdict(p_value: float, faster: EngineName | None) -> str:
 
 def correct_times_by_operator(df: pd.DataFrame) -> dict[Operator, list[float]]:
     """Every timing, in ms, of the pairs the engine answered correctly, per operator."""
-    return {operator: correct_times(df[df["Operator"] == operator]) for operator in Operator}
+    return {
+        operator: correct_times(df[df["Operator"] == operator]) for operator in Operator
+    }
 
 
 def outcomes_by_operator(df: pd.DataFrame) -> pd.DataFrame:
@@ -105,24 +123,28 @@ def outcomes_by_operator(df: pd.DataFrame) -> pd.DataFrame:
     return counts.reindex(index=list(Operator), columns=list(Outcome), fill_value=0)
 
 
+def _pair_speedup(item: tuple[list[float], list[float], bool]) -> float:
+    b_times, s_times, ok = item
+    if not ok:
+        return float("nan")
+    avg1 = sum(s_times) / len(s_times)
+    avg2 = sum(b_times) / len(b_times)
+    return avg1 / avg2
+
+
 def pair_speedups(bfc: pd.DataFrame, specs: pd.DataFrame) -> pd.Series:
     """Per pair, SPECS mean time per run over BFC's, so a value above 1 means BFC is
     faster. NaN unless both engines answered the pair correctly."""
-    both = bfc["Correct"] & specs["Correct"]
+    series = bfc["Correct"] & specs["Correct"]
     return pd.Series(
-        [
-            (sum(s_times) / len(s_times)) / (sum(b_times) / len(b_times)) if ok else float("nan")
-            for b_times, s_times, ok in zip(bfc["Times"], specs["Times"], both)
-        ],
+        list(map(_pair_speedup, zip(bfc["Times"], specs["Times"], series))),
         index=bfc.index,
         dtype=float,
     )
 
 
 def operator_table(bfc: pd.DataFrame, specs: pd.DataFrame) -> pd.DataFrame:
-    """One row per operator. The medians cover each engine's own correct pairs; the
-    speedup is the average of the per-pair speedups (see `pair_speedups`), over the
-    pairs both engines answered correctly, and is empty when there are none."""
+    """An overview of each operator's performance, across every suite."""
     rows = []
     for operator in Operator:
         wanted = bfc["Operator"] == operator
@@ -143,22 +165,23 @@ def operator_table(bfc: pd.DataFrame, specs: pd.DataFrame) -> pd.DataFrame:
 
 
 def matched_times_by_size(df: pd.DataFrame) -> dict[int, list[list[float]]]:
-    """Per size, the timings of the statements the engine answers correctly at every size."""
+    """Per size, the timings of the cases (the same containment claim, tested again
+    at a different size) the engine answers correctly at every size."""
     sizes = sorted(int(size) for size in df["Scale"].unique())
     if len(df) % len(sizes) != 0:
-        raise ValueError("the sizes of a scale suite must hold the same statements")
-    statements = pd.DataFrame(
+        raise ValueError("the sizes of a scale suite must hold the same cases")
+    cases = pd.DataFrame(
         {
             "size": df["Scale"].astype(int),
-            "statement": (df["Index"] - 1) % (len(df) // len(sizes)),
+            "case": (df["Index"] - 1) % (len(df) // len(sizes)),
             "correct": df["Correct"],
             "times": df["Times"],
         }
     )
-    solved = statements.groupby("statement")["correct"].all()
+    solved = cases.groupby("case")["correct"].all()
     kept = set(solved[solved].index)
     grouped: dict[int, list[list[float]]] = {size: [] for size in sizes}
-    for size, statement, times in zip(statements["size"], statements["statement"], statements["times"]):
-        if statement in kept:
+    for size, case, times in zip(cases["size"], cases["case"], cases["times"]):
+        if case in kept:
             grouped[size].append([float(time) for time in times])
     return grouped

@@ -1,4 +1,4 @@
-.PHONY: notebook lint test artifacts artifacts-overview artifacts-by_operator export serve-export clean
+.PHONY: notebook lint check test artifacts artifacts-overview artifacts-by_operator export serve-export clean
 
 RESULTS   := $(wildcard results/*.json)
 TEMPLATES := $(wildcard templates/*.tex)
@@ -11,6 +11,9 @@ notebook:
 lint:
 	uv run ruff check .
 	uv run mypy .
+
+check:
+	uv run marimo check $(NOTEBOOKS)
 
 test:
 	uv run pytest tests/

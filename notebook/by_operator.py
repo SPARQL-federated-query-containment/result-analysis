@@ -24,8 +24,9 @@ def _():
     import pandas as pd
     from matplotlib.figure import Figure
     from matplotlib.patches import Patch
+    from returns.unsafe import unsafe_perform_io
 
-    return Figure, Patch, mo, np, pd
+    return Figure, Patch, mo, np, pd, unsafe_perform_io
 
 
 @app.cell
@@ -52,8 +53,8 @@ def _():
 
 
 @app.cell
-def _(REGULAR_SUITES, SCALE_SUITES, pooled):
-    all_bfc, all_specs = pooled(REGULAR_SUITES + SCALE_SUITES)
+def _(REGULAR_SUITES, SCALE_SUITES, pooled, unsafe_perform_io):
+    all_bfc, all_specs = unsafe_perform_io(pooled(REGULAR_SUITES + SCALE_SUITES).unwrap())
     return all_bfc, all_specs
 
 

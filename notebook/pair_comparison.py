@@ -19,21 +19,44 @@ app = marimo.App(width="medium")
 
 @app.cell
 def _():
+    import sys
+    from pathlib import Path
+
     import marimo as mo
     import matplotlib.patches as mpatches
     import pandas as pd
     from matplotlib.figure import Figure
     from returns.unsafe import unsafe_perform_io
 
-    return Figure, mo, mpatches, pd, unsafe_perform_io
+    from lib.datasets import Suite, result_dataframe
+    from lib.stats import (
+        pair_speedups,
+        statistical_significance,
+        statistical_significance_verdict,
+        summary_table,
+    )
+    from lib.types import EngineName
+
+    return (
+        EngineName,
+        Figure,
+        Path,
+        Suite,
+        mo,
+        mpatches,
+        pair_speedups,
+        pd,
+        result_dataframe,
+        statistical_significance,
+        statistical_significance_verdict,
+        summary_table,
+        sys,
+        unsafe_perform_io,
+    )
 
 
 @app.cell
-def _(mo):
-    import sys
-    from pathlib import Path
-
-    is_web = sys.platform == "emscripten"
+def _(Path, mo, sys):
     if sys.platform == "emscripten":
         # Browser build (GitHub Pages): marimo packages lib/ itself, but the
         # results/ data has no checkout to read from, so fetch it from
@@ -45,21 +68,7 @@ def _(mo):
             _target = Path(_name)
             _target.parent.mkdir(parents=True, exist_ok=True)
             _target.write_text(open_url(f"{_base}/{_name}").read())
-
-    from lib.datasets import Suite, result_dataframe
-    from lib.stats import compare, pair_speedups, summary_table, verdict
-    from lib.types import EngineName
-
-    return (
-        EngineName,
-        Suite,
-        compare,
-        is_web,
-        pair_speedups,
-        result_dataframe,
-        summary_table,
-        verdict,
-    )
+    return
 
 
 @app.cell
@@ -86,23 +95,14 @@ def _(dropdown, log_scale, mo):
 
 
 @app.cell
-def _(EngineName, Figure, is_web, mo, mpatches, pd):
+def _(EngineName, Figure, mo, mpatches, pd):
     _ENGINE_COLORS = {
         EngineName.BFC: "#2a78d6",
         EngineName.SPECS: "#eb6834",
     }
 
     def figure_view(fig):
-        if not is_web:
-            return mo.mpl.interactive(fig)
-        from io import BytesIO
-
-        buffer = BytesIO()
-        fig.savefig(buffer, format="svg")
-        return mo.Html(
-            "<style>.fig svg { max-width: 100%; height: auto; }</style>"
-            f'<div class="fig">{buffer.getvalue().decode()}</div>'
-        )
+        return mo.mpl.interactive(fig)
 
     def pair_labels(df):
         return [
@@ -114,10 +114,12 @@ def _(EngineName, Figure, is_web, mo, mpatches, pd):
         fig = Figure(figsize=(max(7, 1.1 * len(bfc) + 2), 4.5), layout="constrained")
         ax = fig.subplots()
 
-        for engine, df, offset in (
+        plot_set_param = (
             (EngineName.BFC, bfc, -0.2),
             (EngineName.SPECS, specs, 0.2),
-        ):
+        )
+
+        for engine, df, offset in plot_set_param: 
             drawn = [
                 (position + offset, list(times))
                 for position, (times, correct) in enumerate(zip(df["Times"], df["Correct"]), start=1)
@@ -181,7 +183,7 @@ def _(mo):
     mo.md(r"""
     ## Operator detail
 
-    Violins show the timings of the pairs an engine answered correctly; a pair it did not answer correctly has no violin.
+    Violin plots show the timings of the pairs an engine answered correctly.
     """)
     return
 
@@ -216,9 +218,9 @@ def _(
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## Pairs
+    ## Table
 
-    Speedup of BFC over SPECS = SPECS time / BFC time. Above 1: BFC faster. Below 1: SPECS faster.
+    A table of the data of all the pairs of the suite.
     """)
     return
 
@@ -295,8 +297,16 @@ def _(mo):
 
 
 @app.cell
-def _(bfc_df, compare, mo, specs_df, suite, summary_table, verdict):
-    _p_value, _faster = compare(bfc_df, specs_df)
+def _(
+    bfc_df,
+    mo,
+    specs_df,
+    statistical_significance,
+    statistical_significance_verdict,
+    suite,
+    summary_table,
+):
+    _p_value, _faster = statistical_significance(bfc_df, specs_df)
     mo.vstack(
         [
             mo.md(f"### Suite `{suite.value}`, N = {len(bfc_df)} pairs"),
@@ -309,7 +319,7 @@ def _(bfc_df, compare, mo, specs_df, suite, summary_table, verdict):
                 selection=None,
                 show_download=False,
             ),
-            mo.md(verdict(_p_value, _faster)),
+            mo.md(statistical_significance_verdict(_p_value, _faster)),
         ]
     )
     return

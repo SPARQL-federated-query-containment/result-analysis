@@ -57,8 +57,6 @@ _OPERATOR_LABELS: dict[Operator, str] = {
 
 
 class QueryFamily(StrEnum):
-    """The base query a pair is drawn from"""
-
     BRANCHING = "branching"
     BRANCHING_LOCAL = "branching_local"
     CHAIN = "chain"
@@ -141,8 +139,6 @@ class Verdict(StrEnum):
 
 
 class ContainmentResult(StrEnum):
-    """Every value the `verdict` field can take across all PairResult variants."""
-
     CONTAINED = "contained"
     NOT_CONTAINED = "not contained"
     UNKNOWN = "unknown"

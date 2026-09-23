@@ -34,6 +34,7 @@ enable_ruff = true
 python_version = "3.14"
 strict = true
 exclude = ["^dist/"]
+plugins = ["returns.contrib.mypy.returns_plugin"]
 
 [[tool.mypy.overrides]]
 module = "notebook.*"

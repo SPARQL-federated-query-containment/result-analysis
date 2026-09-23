@@ -6,7 +6,12 @@ import math
 
 import pandas as pd
 
-from lib.stats import ALPHA, _hodges_lehmann_shift, compare, pair_speedups
+from lib.stats import (
+    ALPHA,
+    _hodges_lehmann_shift,
+    pair_speedups,
+    statistical_significance,
+)
 from lib.types import EngineName
 
 
@@ -27,7 +32,7 @@ def test_hodges_lehmann_shift_of_symmetric_values_is_zero() -> None:
 def test_compare_reports_bfc_when_consistently_faster() -> None:
     bfc = _frame([[100.0]] * 15, [True] * 15)
     specs = _frame([[200.0]] * 15, [True] * 15)
-    p_value, faster = compare(bfc, specs)
+    p_value, faster = statistical_significance(bfc, specs)
     assert p_value < ALPHA
     assert faster is EngineName.BFC
 
@@ -35,7 +40,7 @@ def test_compare_reports_bfc_when_consistently_faster() -> None:
 def test_compare_reports_specs_when_consistently_faster() -> None:
     bfc = _frame([[200.0]] * 15, [True] * 15)
     specs = _frame([[100.0]] * 15, [True] * 15)
-    p_value, faster = compare(bfc, specs)
+    p_value, faster = statistical_significance(bfc, specs)
     assert p_value < ALPHA
     assert faster is EngineName.SPECS
 
@@ -46,7 +51,7 @@ def test_compare_reports_no_difference_for_symmetric_noise() -> None:
     factors = [1.1, 1 / 1.1, 1.2, 1 / 1.2, 1.15, 1 / 1.15]
     bfc = _frame([[100.0]] * len(factors), [True] * len(factors))
     specs = _frame([[100.0 * f] for f in factors], [True] * len(factors))
-    p_value, faster = compare(bfc, specs)
+    p_value, faster = statistical_significance(bfc, specs)
     assert p_value >= ALPHA
     assert faster is None
 
@@ -54,7 +59,7 @@ def test_compare_reports_no_difference_for_symmetric_noise() -> None:
 def test_compare_reports_nan_when_no_pair_is_shared_correct() -> None:
     bfc = _frame([[100.0]] * 5, [True] * 5)
     specs = _frame([[100.0]] * 5, [False] * 5)
-    p_value, faster = compare(bfc, specs)
+    p_value, faster = statistical_significance(bfc, specs)
     assert math.isnan(p_value)
     assert faster is None
 
@@ -80,7 +85,7 @@ def test_compare_p_value_matches_wilcoxon_on_the_same_log_speedups() -> None:
     bfc = _frame([[100.0]] * len(ratios), [True] * len(ratios))
     specs = _frame([[100.0 * r] for r in ratios], [True] * len(ratios))
     expected_p = float(wilcoxon([math.log(r) for r in ratios]).pvalue)
-    p_value, _ = compare(bfc, specs)
+    p_value, _ = statistical_significance(bfc, specs)
     assert p_value == expected_p
     assert expected_p == 0.25  # pinned so a future scipy/logic change is caught
 
@@ -97,6 +102,6 @@ def test_compare_uses_hodges_lehmann_not_the_more_frequent_winner() -> None:
         bfc_times.append([100.0]); specs_times.append([96.0]); correct.append(True)  # SPECS ~4% faster
     bfc = _frame(bfc_times, correct)
     specs = _frame(specs_times, correct)
-    p_value, faster = compare(bfc, specs)
+    p_value, faster = statistical_significance(bfc, specs)
     assert p_value < ALPHA
     assert faster is EngineName.BFC

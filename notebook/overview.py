@@ -25,23 +25,24 @@ def _():
     import pandas as pd
     from matplotlib.figure import Figure
     from matplotlib.patches import Patch
+    from returns.unsafe import unsafe_perform_io
 
-    return Figure, Patch, mo, np, pd
+    return Figure, Patch, mo, np, pd, unsafe_perform_io
 
 
 @app.cell
 def _():
     from lib.datasets import REGULAR_SUITES, SCALE_SUITES, Suite, suite_frames
-    from lib.largerdfbench import load as load_largerdfbench
+    from lib.largerdfbench import execution_times as largerdfbench_execution_times
     from lib.stats import (
         ALPHA,
         SIGNIFICANCE_TESTS,
-        compare,
         correct_times,
         matched_times_by_size,
         pooled,
+        statistical_significance,
+        statistical_significance_verdict,
         summary_table,
-        verdict,
     )
     from lib.types import (
         EngineName,
@@ -58,21 +59,21 @@ def _():
         SCALE_SUITES,
         SIGNIFICANCE_TESTS,
         Suite,
-        compare,
         correct_times,
-        load_largerdfbench,
+        largerdfbench_execution_times,
         matched_times_by_size,
         pooled,
+        statistical_significance,
+        statistical_significance_verdict,
         suite_frames,
         summary_table,
-        verdict,
     )
 
 
 @app.cell
-def _(REGULAR_SUITES, SCALE_SUITES, pd, pooled):
-    regular_bfc, regular_specs = pooled(REGULAR_SUITES)
-    scale_bfc, scale_specs = pooled(SCALE_SUITES)
+def _(REGULAR_SUITES, SCALE_SUITES, pd, pooled, unsafe_perform_io):
+    regular_bfc, regular_specs = unsafe_perform_io(pooled(REGULAR_SUITES).unwrap())
+    scale_bfc, scale_specs = unsafe_perform_io(pooled(SCALE_SUITES).unwrap())
     all_bfc = pd.concat([regular_bfc, scale_bfc], ignore_index=True)
     all_specs = pd.concat([regular_specs, scale_specs], ignore_index=True)
     return (
@@ -119,53 +120,69 @@ def _(mo):
 
 
 @app.cell
-def _(all_bfc, all_specs, compare, mo, show_table, summary_table, verdict):
+def _(
+    all_bfc,
+    all_specs,
+    mo,
+    show_table,
+    statistical_significance,
+    statistical_significance_verdict,
+    summary_table,
+):
     all_table = summary_table(all_bfc, all_specs)
-    all_p, all_faster = compare(all_bfc, all_specs)
+    all_p, all_faster = statistical_significance(all_bfc, all_specs)
     mo.vstack(
         [
             mo.md(f"### All suites (regular and scale), N = {len(all_bfc)} pairs"),
             show_table(all_table),
-            mo.md(verdict(all_p, all_faster)),
+            mo.md(statistical_significance_verdict(all_p, all_faster)),
         ]
     )
-    return all_faster, all_p, all_table
+    return (all_table,)
 
 
 @app.cell
 def _(
-    compare,
     mo,
     regular_bfc,
     regular_specs,
     show_table,
+    statistical_significance,
+    statistical_significance_verdict,
     summary_table,
-    verdict,
 ):
     regular_table = summary_table(regular_bfc, regular_specs)
-    regular_p, regular_faster = compare(regular_bfc, regular_specs)
+    regular_p, regular_faster = statistical_significance(regular_bfc, regular_specs)
     mo.vstack(
         [
             mo.md(f"### Regular suites (branching, operators, star, ucfq), N = {len(regular_bfc)} pairs"),
             show_table(regular_table),
-            mo.md(verdict(regular_p, regular_faster)),
+            mo.md(statistical_significance_verdict(regular_p, regular_faster)),
         ]
     )
-    return regular_faster, regular_p
+    return
 
 
 @app.cell
-def _(compare, mo, scale_bfc, scale_specs, show_table, summary_table, verdict):
+def _(
+    mo,
+    scale_bfc,
+    scale_specs,
+    show_table,
+    statistical_significance,
+    statistical_significance_verdict,
+    summary_table,
+):
     scale_table = summary_table(scale_bfc, scale_specs)
-    scale_p, scale_faster = compare(scale_bfc, scale_specs)
+    scale_p, scale_faster = statistical_significance(scale_bfc, scale_specs)
     mo.vstack(
         [
             mo.md(f"### Scale suites (sizes pooled), N = {len(scale_bfc)} pairs"),
             show_table(scale_table),
-            mo.md(verdict(scale_p, scale_faster)),
+            mo.md(statistical_significance_verdict(scale_p, scale_faster)),
         ]
     )
-    return scale_faster, scale_p
+    return
 
 
 @app.cell(hide_code=True)
@@ -225,12 +242,13 @@ def _(EngineName, Figure, correct_times, draw_violins, tidy):
 
 
 @app.cell
-def _(EngineName, matched_times_by_size, suite_frames):
+def _(EngineName, matched_times_by_size, suite_frames, unsafe_perform_io):
     def scale_data(suite):
-        """Per size, each engine's timings over the statements it answers correctly at every size,
-        and its raw correct count at that size (over all statements, not just the survivors)."""
+        """Per size, each engine's timings over the cases it answers correctly at every
+        size, and its raw correct count at that size (over all cases, not just the
+        survivors)."""
         engines = (EngineName.BFC, EngineName.SPECS)
-        frames = suite_frames(suite)
+        frames = unsafe_perform_io(suite_frames(suite).unwrap())
         by_engine = {engine: matched_times_by_size(df) for engine, df in zip(engines, frames)}
         sizes = list(by_engine[EngineName.BFC])
         total = len(frames[0]) // len(sizes)
@@ -238,12 +256,11 @@ def _(EngineName, matched_times_by_size, suite_frames):
             engine: [[time for times in by_engine[engine][size] for time in times] for size in sizes]
             for engine in engines
         }
-        statements = {engine: len(by_engine[engine][sizes[0]]) for engine in engines}
         correct_counts = {
             engine: [int(df[df["Scale"] == size]["Correct"].sum()) for size in sizes]
             for engine, df in zip(engines, frames)
         }
-        return sizes, timings, statements, total, correct_counts
+        return sizes, timings, total, correct_counts
 
     return (scale_data,)
 
@@ -252,7 +269,7 @@ def _(EngineName, matched_times_by_size, suite_frames):
 def _(COLORS, EngineName, Figure, Patch, draw_violins, scale_data, tidy):
     def size_figure(suite):
         """Violins per size."""
-        sizes, timings, _, total, correct_counts = scale_data(suite)
+        sizes, timings, total, correct_counts = scale_data(suite)
         fig = Figure(layout="constrained")
         ax = fig.subplots()
         for engine, offset in ((EngineName.BFC, -0.2), (EngineName.SPECS, 0.2)):
@@ -289,7 +306,7 @@ def _(COLORS, EngineName, Figure, Patch, draw_violins, scale_data, tidy):
 def _(COLORS, EngineName, Figure, np, scale_data, tidy):
     def growth_figure(suite):
         """Median time (inter-quartile band) against size, log y-axis."""
-        sizes, timings, _, total, correct_counts = scale_data(suite)
+        sizes, timings, total, correct_counts = scale_data(suite)
         fig = Figure(layout="constrained")
         ax = fig.subplots()
         for engine in (EngineName.BFC, EngineName.SPECS):
@@ -341,55 +358,36 @@ def _(mo):
 
 
 @app.cell
-def _(all_bfc, all_faster, all_p, all_specs, group_violins, mo, verdict):
+def _(all_bfc, all_specs, group_violins, mo):
     fig_all = group_violins(all_bfc, all_specs)
     mo.vstack(
         [
             mo.md(f"### Execution time of BFC and SPECS on all suites, N = {len(all_bfc)} pairs"),
             fig_all,
-            mo.md(verdict(all_p, all_faster)),
         ]
     )
     return
 
 
 @app.cell
-def _(
-    group_violins,
-    mo,
-    regular_bfc,
-    regular_faster,
-    regular_p,
-    regular_specs,
-    verdict,
-):
+def _(group_violins, mo, regular_bfc, regular_specs):
     fig_regular = group_violins(regular_bfc, regular_specs)
     mo.vstack(
         [
             mo.md(f"### Execution time of BFC and SPECS on the regular suites, N = {len(regular_bfc)} pairs"),
             fig_regular,
-            mo.md(verdict(regular_p, regular_faster)),
         ]
     )
     return
 
 
 @app.cell
-def _(
-    group_violins,
-    mo,
-    scale_bfc,
-    scale_faster,
-    scale_p,
-    scale_specs,
-    verdict,
-):
+def _(group_violins, mo, scale_bfc, scale_specs):
     fig_scale = group_violins(scale_bfc, scale_specs)
     mo.vstack(
         [
             mo.md(f"### Execution time of BFC and SPECS on the scale suites, N = {len(scale_bfc)} pairs"),
             fig_scale,
-            mo.md(verdict(scale_p, scale_faster)),
         ]
     )
     return
@@ -397,7 +395,7 @@ def _(
 
 @app.cell(hide_code=True)
 def _(Suite, mo, scale_data):
-    _, _, _, _total, _ = scale_data(Suite.BRANCHING_SCALE)
+    _, _, _total, _ = scale_data(Suite.BRANCHING_SCALE)
     mo.md(f"### Branching scale suite, {_total} pairs per size")
     return
 
@@ -428,7 +426,7 @@ def _(Suite, growth_figure, mo):
 
 @app.cell(hide_code=True)
 def _(Suite, mo, scale_data):
-    _, _, _, _total, _ = scale_data(Suite.OPERATORS_SCALE)
+    _, _, _total, _ = scale_data(Suite.OPERATORS_SCALE)
     mo.md(f"### Chain scale suite, {_total} pairs per size")
     return
 
@@ -459,7 +457,7 @@ def _(Suite, growth_figure, mo):
 
 @app.cell(hide_code=True)
 def _(Suite, mo, scale_data):
-    _, _, _, _total, _ = scale_data(Suite.STAR_SCALE)
+    _, _, _total, _ = scale_data(Suite.STAR_SCALE)
     mo.md(f"### Star scale suite, {_total} pairs per size")
     return
 
@@ -490,7 +488,7 @@ def _(Suite, growth_figure, mo):
 
 @app.cell(hide_code=True)
 def _(Suite, mo, scale_data):
-    _, _, _, _total, _ = scale_data(Suite.UCFQ_SCALE)
+    _, _, _total, _ = scale_data(Suite.UCFQ_SCALE)
     mo.md(f"### UCFQ scale suite, {_total} pairs per size")
     return
 
@@ -532,13 +530,14 @@ def _(
     LargeRDFBenchCategory,
     LargeRDFBenchSourceSelection,
     all_table,
-    load_largerdfbench,
+    largerdfbench_execution_times,
     mo,
     pd,
+    unsafe_perform_io,
 ):
     _bfc_mean = all_table.loc[all_table["Engine"] == "BFC", "Mean (ms)"].item()
 
-    _largerdfbench = load_largerdfbench()
+    _largerdfbench = unsafe_perform_io(largerdfbench_execution_times().unwrap())
     _correct = _largerdfbench[_largerdfbench["Complete"] & _largerdfbench["Time (ms)"].notna()]
 
     def _stat(category, selection):
@@ -656,7 +655,7 @@ def _(ALPHA, SIGNIFICANCE_TESTS, pd):
     def latex_verdict(p_value, faster):
         if pd.isna(p_value):
             return "No comparison is possible, an engine has no correct pair."
-        p_text = "p < 0.0001" if p_value < 1e-4 else f"p = {p_value:.4g}"
+        p_text = f"p = {p_value:.4g}"
         test = (
             f"Wilcoxon signed-rank test with Hodges-Lehmann direction (Bonferroni-corrected "
             f"$\\alpha$ = {ALPHA:.4g} for {SIGNIFICANCE_TESTS} tests) on the pairs both engines "
@@ -722,7 +721,6 @@ def _(
     Suite,
     all_bfc,
     all_specs,
-    compare,
     group_violins,
     growth_figure,
     markdown_table,
@@ -732,8 +730,9 @@ def _(
     scale_bfc,
     scale_specs,
     size_figure,
+    statistical_significance,
+    statistical_significance_verdict,
     summary_table,
-    verdict,
 ):
     def _svg_bytes(fig):
         from io import BytesIO
@@ -766,9 +765,11 @@ def _(
         ("scale", "Scale suites (sizes pooled)", (scale_bfc, scale_specs)),
     ):
         _table = summary_table(_bfc, _specs)
-        _p_value, _faster = compare(_bfc, _specs)
+        _p_value, _faster = statistical_significance(_bfc, _specs)
         _latex = render_table(_name, _table, len(_bfc), _p_value, _faster)
-        _markdown = markdown_table(_title, _table, len(_bfc), verdict(_p_value, _faster))
+        _markdown = markdown_table(
+            _title, _table, len(_bfc), statistical_significance_verdict(_p_value, _faster)
+        )
         artifacts[f"table_{_name}.tex"] = _latex.encode()
         artifacts[f"table_{_name}.md"] = _markdown.encode()
     return (artifacts,)
