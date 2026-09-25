@@ -1,9 +1,9 @@
-\begin{table}[t]
+\begin{table*}[t]
   \centering
   \small
   \caption{Results of \solverName{} and SpeCS over all @n pairs.
 \solverName{} is significantly faster (Wilcoxon signed-rank test, @p) and returns no incorrect answer, answering unknown where its procedure cannot decide.
-It also has fewer timeouts and out-of-memory failures than SpeCS.}
+It also has fewer timeouts and \ac{OOM} failures than SpeCS.}
   \begin{tabular}{lrrrrrrrr}
     \toprule
     Engine & Mean (ms) & Median (ms) & Correct & Unknown & Incorrect & Timeouts & Errors & OOM \\
@@ -12,4 +12,4 @@ It also has fewer timeouts and out-of-memory failures than SpeCS.}
     \bottomrule
   \end{tabular}
   \label{fig:overview_bfc_specs}
-\end{table}
+\end{table*}
