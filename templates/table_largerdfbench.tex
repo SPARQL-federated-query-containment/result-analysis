@@ -1,0 +1,16 @@
+\begin{table}[t]
+  \centering
+  \small
+  \caption{Mean execution time of the complete LargeRDFBench runs~\cite{saleem2018largerdfbench} per query category and source selection, with the number of runs and the ratio to the mean time of \solverName{} (@bfc_mean\,s).
+Deciding containment takes a fraction of the time of executing a federated query under automatic source selection, and remains cheaper with \texttt{SERVICE} clauses except for the simple queries.}
+  \label{fig:largerdfbench_bfc}
+  \begin{tabular}{lrrrrrr}
+    \toprule
+    & \multicolumn{3}{c}{Automatic} & \multicolumn{3}{c}{\texttt{SERVICE}} \\
+    \cmidrule(lr){2-4} \cmidrule(lr){5-7}
+    Category & Mean (s) & $n$ & Ratio & Mean (s) & $n$ & Ratio \\
+    \midrule
+@rows
+    \bottomrule
+  \end{tabular}
+\end{table}

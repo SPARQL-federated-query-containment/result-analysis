@@ -1,11 +1,14 @@
 \begin{table}[t]
   \centering
   \small
-  \caption{BFC and SPECS per operator on all suites (@n pairs). Correct is the number of pairs an engine answered correctly, and its median time is over those pairs. The average speedup of BFC over SPECS is the mean, over those pairs, of the mean time per run of SPECS divided by that of BFC, so a value above 1 means BFC is faster and below 1 means SPECS is faster; a dash means there is no such pair.}
-  \label{tab:by-operator}
+  \caption{Results of \solverName{} and SpeCS per mutation over all @n pairs.
+Median times are over the pairs an engine answered correctly.
+The speedup is the mean ratio of the time of SpeCS to that of \solverName{} over those pairs, so a value above 1 means \solverName{} is faster.
+A dash marks a mutation with no such pair.}
+  \label{fig:operator_bfc_specs}
   \begin{tabular}{lrrrrrr}
     \toprule
-    Operator & Pairs & BFC correct & SPECS correct & BFC median (ms) & SPECS median (ms) & \shortstack[r]{Average speedup\\BFC over SPECS} \\
+    Mutation & Pairs & \solverName{} correct & SpeCS correct & \solverName{} median (ms) & SpeCS median (ms) & \shortstack[r]{Average speedup\\\solverName{} over SpeCS} \\
     \midrule
 @rows
     \bottomrule

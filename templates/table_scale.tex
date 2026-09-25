@@ -1,8 +1,10 @@
 \begin{table}[t]
   \centering
   \small
-  \caption{BFC and SPECS on the scale suites, all sizes pooled (@n pairs). Mean and median are over the pairs an engine answered correctly; the counts cover every pair. @verdict}
-  \label{tab:overview-scale}
+  \caption{Results of \solverName{} and SpeCS over the @n pairs of the scale suites, all sizes pooled.
+\solverName{} is significantly faster (Wilcoxon signed-rank test, @p) and returns no incorrect answer, answering unknown where its procedure cannot decide.
+It also has fewer timeouts and out-of-memory failures than SpeCS.}
+  \label{fig:scale_bfc_specs}
   \begin{tabular}{lrrrrrrrr}
     \toprule
     Engine & Mean (ms) & Median (ms) & Correct & Unknown & Incorrect & Timeouts & Errors & OOM \\
