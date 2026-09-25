@@ -545,7 +545,7 @@ def _(
     pd,
     unsafe_perform_io,
 ):
-    _bfc_mean = all_table.loc[all_table["Engine"] == "BFC", "Mean (ms)"].item()
+    largerdfbench_bfc_mean_ms = all_table.loc[all_table["Engine"] == "BFC", "Mean (ms)"].item()
 
     _largerdfbench = unsafe_perform_io(largerdfbench_execution_times().unwrap())
     _correct = _largerdfbench[_largerdfbench["Complete"] & _largerdfbench["Time (ms)"].notna()]
@@ -567,10 +567,10 @@ def _(
                 "Category": _category.value,
                 "Automatic mean (ms)": _auto_mean,
                 "Automatic n": _auto_n,
-                "Automatic speedup vs BFC": _auto_mean / _bfc_mean,
+                "Automatic speedup vs BFC": _auto_mean / largerdfbench_bfc_mean_ms,
                 "Explicit SERVICE mean (ms)": _service_mean,
                 "Explicit SERVICE n": _service_n,
-                "Explicit SERVICE speedup vs BFC": _service_mean / _bfc_mean,
+                "Explicit SERVICE speedup vs BFC": _service_mean / largerdfbench_bfc_mean_ms,
             }
         )
 
@@ -581,10 +581,10 @@ def _(
             "Category": "All",
             "Automatic mean (ms)": _all_auto.mean(),
             "Automatic n": len(_all_auto),
-            "Automatic speedup vs BFC": _all_auto.mean() / _bfc_mean,
+            "Automatic speedup vs BFC": _all_auto.mean() / largerdfbench_bfc_mean_ms,
             "Explicit SERVICE mean (ms)": _all_service.mean(),
             "Explicit SERVICE n": len(_all_service),
-            "Explicit SERVICE speedup vs BFC": _all_service.mean() / _bfc_mean,
+            "Explicit SERVICE speedup vs BFC": _all_service.mean() / largerdfbench_bfc_mean_ms,
         }
     )
     largerdfbench_table = pd.DataFrame(_rows)
@@ -612,7 +612,7 @@ def _(
 
     mo.vstack(
         [
-            mo.md(f"### LargeRDFBench, speedup vs BFC's mean ({_bfc_mean:.0f} ms)"),
+            mo.md(f"### LargeRDFBench, speedup vs BFC's mean ({largerdfbench_bfc_mean_ms:.0f} ms)"),
             mo.md(_gradient),
             mo.ui.table(
                 largerdfbench_table,
@@ -628,7 +628,7 @@ def _(
             ),
         ]
     )
-    return
+    return largerdfbench_bfc_mean_ms, largerdfbench_table
 
 
 @app.cell(hide_code=True)
@@ -730,14 +730,36 @@ def _(ALPHA, SIGNIFICANCE_TESTS, pd):
             return f"{test}: ${p_text}$, no significant difference."
         return f"{test}: ${p_text}$, {faster.value.upper()} is significantly faster."
 
+    def latex_p(p_value):
+        if pd.isna(p_value):
+            return "no comparison is possible"
+        return f"$p = {p_value:.2e}$"
+
     def render_table(name, table, n_pairs, p_value, faster):
         """Fill templates/table_<name>.tex, which holds the caption, label and layout."""
         from pathlib import Path
 
         template = _LatexTemplate(Path(f"templates/table_{name}.tex").read_text())
         return template.substitute(
-            rows=latex_rows(table), n=n_pairs, verdict=latex_verdict(p_value, faster)
+            rows=latex_rows(table), n=n_pairs, p=latex_p(p_value), verdict=latex_verdict(p_value, faster)
         )
+
+    def render_largerdfbench_table(table, bfc_mean_ms):
+        """Fill templates/table_largerdfbench.tex, which holds the caption, label and layout."""
+        from pathlib import Path
+
+        lines = []
+        for row in table.itertuples(index=False):
+            if row.Category == "All":
+                lines.append(r"    \midrule")
+            cells = [
+                row.Category,
+                f"{row[1] / 1000:.1f}", str(row[2]), f"{row[3]:.1f}",
+                f"{row[4] / 1000:.1f}", str(row[5]), f"{row[6]:.1f}",
+            ]
+            lines.append("    " + " & ".join(cells) + r" \\")
+        template = _LatexTemplate(Path("templates/table_largerdfbench.tex").read_text())
+        return template.substitute(rows="\n".join(lines), bfc_mean=f"{bfc_mean_ms / 1000:.1f}")
 
     def markdown_table(title, table, n_pairs, verdict_text):
         columns = list(table.columns)
@@ -778,7 +800,13 @@ def _(ALPHA, SIGNIFICANCE_TESTS, pd):
         for name, data in files.items():
             (out / name).write_bytes(data)
 
-    return markdown_table, render_table, write_files, zip_bytes
+    return (
+        markdown_table,
+        render_largerdfbench_table,
+        render_table,
+        write_files,
+        zip_bytes,
+    )
 
 
 @app.cell
@@ -788,9 +816,12 @@ def _(
     all_specs,
     group_violins,
     growth_figure,
+    largerdfbench_bfc_mean_ms,
+    largerdfbench_table,
     markdown_table,
     regular_bfc,
     regular_specs,
+    render_largerdfbench_table,
     render_table,
     scale_bfc,
     scale_specs,
@@ -837,6 +868,9 @@ def _(
         )
         artifacts[f"table_{_name}.tex"] = _latex.encode()
         artifacts[f"table_{_name}.md"] = _markdown.encode()
+    artifacts["table_largerdfbench.tex"] = render_largerdfbench_table(
+        largerdfbench_table, largerdfbench_bfc_mean_ms
+    ).encode()
     return (artifacts,)
 
 
